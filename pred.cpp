@@ -1,3 +1,4 @@
+//TODO: create methods for going left and right in dfs & bfs arrays
 #include <stdio.h>      /* printf, scanf, puts, NULL */
 #include <stdlib.h>     /* srand, rand */
 #include <time.h>       /* time */
