@@ -68,7 +68,18 @@ int pred_lower_bound(int x) {
 
 //predecessor query in a bfs layout tree
 int pred_bfs_array(int x) {
+
+  int cur = bfs_arr[0];
   
+
+}
+
+int bfs_right(int x) {
+  return (x+1)*2;
+}
+
+int bfs_left(int x) {
+  return x*2+1;
 }
 
 void print_array(vector<int> a) {
@@ -106,6 +117,10 @@ void preprocess_bfs_array(struct Node *BST) {
 }
 
 int main () {
+
+  printf("%d %d %d %d\n", bfs_left(0), bfs_left(2), bfs_right(0), bfs_right(2));
+
+
   //initialize seed
   srand (time(NULL));
   //  fill the sorted_array with random numbers
