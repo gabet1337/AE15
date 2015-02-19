@@ -5,10 +5,11 @@
 #include <algorithm>
 #include <vector>
 #include <queue>
+#include <papi.h>
 
-#define SIZE 16
+#define SIZE 1024*16
 #define NUM_QUERIES 2
-#define MAX_NUM 1024 * 1024
+#define MAX_NUM 1024 * 1024 * 1024
 
 using namespace std;
 
@@ -83,7 +84,7 @@ int bfs_left(int x) {
 }
 
 void print_array(vector<int> a) {
-  printf("%d \n", a.size());
+  printf("%d \n", (int)a.size());
   for (int i = 0; i < a.size(); i++)
     printf("%d ", a[i]);
   puts("");
@@ -91,7 +92,7 @@ void print_array(vector<int> a) {
 
 void preprocess_sorted_array() {
   sort(sorted_arr.begin(),sorted_arr.end());
-  print_array(sorted_arr);
+  //print_array(sorted_arr);
 }
 
 int cur = 0;
@@ -118,8 +119,17 @@ void preprocess_bfs_array(struct Node *BST) {
 
 int main () {
 
-  printf("%d %d %d %d\n", bfs_left(0), bfs_left(2), bfs_right(0), bfs_right(2));
+  int eventset = PAPI_NULL;
+  long long values[1] = {0};
 
+  PAPI_library_init(PAPI_VER_CURRENT);
+
+  PAPI_create_eventset(&eventset);
+  PAPI_add_event(eventset, PAPI_L1_DCA);
+
+  PAPI_start(eventset);
+
+  printf("%d %d %d %d\n", bfs_left(0), bfs_left(2), bfs_right(0), bfs_right(2));
 
   //initialize seed
   srand (time(NULL));
@@ -137,9 +147,9 @@ int main () {
   struct Node *BST = sorted_array_to_BST(sorted_arr, 0, sorted_arr.size());
 
   preprocess_dfs_array(BST);
-  print_array(dfs_arr); 
+  //print_array(dfs_arr); 
   preprocess_bfs_array(BST);
-  print_array(bfs_arr);
+  //print_array(bfs_arr);
 
   //make random queries using binary search in sorted sorted_array
   for (int i = 0; i < NUM_QUERIES; i++) {
@@ -152,6 +162,10 @@ int main () {
     int x = rand() % MAX_NUM; //rand below SIZE
     printf("pred of %d is %d\n", x, pred_lower_bound(x));
   }
+
+  PAPI_read(eventset, values);
+  printf("number of total instructions:  %lld\n", values[0]);
+  PAPI_stop(eventset, values);
 
   return 0;
 }
