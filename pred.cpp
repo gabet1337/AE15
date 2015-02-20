@@ -84,7 +84,41 @@ int bin_search(int(*left)(const int, const int),   //function pointer on how to 
     return bin_search(left, right, height-1, arr, element, right(root, height));
 }
 
+int tree_minimum(int(*left)(const int, const int),
+		 int node, int height) {
+  while (--height) {
+    node = left(node, height);
+  }
+  return node;
+}
 
+int tree_maximum(int(*right)(const int, const int),
+		 int node, int height) {
+  while (--height) {
+    node = right(node, height);
+  }
+  return node;
+}
+
+int tree_predecessor(int(*left)(const int, const int),
+		     int(*right)(const int, const int),
+		     vector<int> &arr,
+		     int elem,
+		     int height,
+		     int root) {
+  int result = -1;
+
+  while (height) {
+    if (arr[root] > elem)
+      root = left(root,height);
+    else {
+      result = arr[root];
+      root = right(root, height);
+    }
+    --height;
+  }
+  return result;
+}
 
 int bfs_right(int x, int height) {
   return (x+1)*2;
@@ -172,12 +206,13 @@ vector<int> sorted_array_to_dfs_tree(vector<int> sorted_arr) {
 }
 
 int main() {
-
   vector<int> a;
   for (int i = 1; i <= 15; i++) a.push_back(i);
   a.resize(SIZE);
   vector<int> dfs = sorted_array_to_dfs_tree(a);
   print_array(dfs);
+  printf("tree min: %d\n", dfs[tree_minimum(dfs_left, 8, ceil(log2((int)dfs.size())))-1]);
+  printf("tree pre: %d\n", tree_predecessor(dfs_left, dfs_right, dfs, 0, ceil(log2((int)dfs.size())), 0));
   printf("%d\n", bin_search(dfs_left, dfs_right, ceil(log2((int)dfs.size())), dfs, 1, 0));
   return 0;
 }
