@@ -7,7 +7,7 @@
 #include <papi.h>
 #include <math.h>
 
-#define SIZE 1024-1
+#define SIZE 1024*1024-1
 #define NUM_QUERIES 2
 #define MAX_NUM 1024 * 1024
 
@@ -27,12 +27,12 @@ struct Node* newNode(int data) {
   return node;
 }
 
-struct Node* sorted_array_to_BST(vector<int> a, int start, int end) {
+struct Node* sorted_array_to_BST(vector<int> &a, int start, int end) {
   if (start > end) return NULL;
   int mid = start + ((end - start) / 2);
   struct Node *root = newNode(a[mid]);
   root->left = sorted_array_to_BST(a, start, mid-1);
-  root->right = sorted_array_to_BST(a,mid+1, end);
+  root->right = sorted_array_to_BST(a, mid+1, end);
   return root;
 }
 
@@ -200,25 +200,20 @@ void test() {
     sorted_arr[i] = r;
   }
 
-  puts("here");
-
   preprocess_sorted_array(sorted_arr);
-  puts("here");
   //print_array(sorted_arr);
   vector<int> dfs = sorted_array_to_dfs_tree(sorted_arr);
-  puts("here");
   vector<int> bfs = sorted_array_to_bfs_tree(sorted_arr);
-  vector<int> inorder = sorted_arr;
-  puts("here");
+  //vector<int> inorder = sorted_arr;
   int x = rand() % MAX_NUM;
   int height = ceil(log2((int)SIZE));
   int std_pred = pred_lower_bound(x, sorted_arr);
   int dfs_pred = tree_predecessor(dfs_left, dfs_right, dfs, x, height, 0);
   int bfs_pred = tree_predecessor(bfs_left, bfs_right, bfs, x, height, 0);
-  int inorder_pred = tree_predecessor(inorder_left, inorder_right, sorted_arr, x, height, SIZE/2);
+  //int inorder_pred = tree_predecessor(inorder_left, inorder_right, sorted_arr, x, height, SIZE/2);
   int bin_search = pred_sorted_array(x, sorted_arr);
 
-  printf("%d %d %d %d %d\n", std_pred, dfs_pred, bfs_pred, inorder_pred, bin_search);
+  printf("%d %d %d %d\n", std_pred, dfs_pred, bfs_pred, bin_search);
 
 }
 
