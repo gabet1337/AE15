@@ -64,11 +64,6 @@ int pred_lower_bound(int x, vector<int> &sorted_arr) {
   return *(it-1);
 }
 
-//predecessor query in a bfs layout tree
-int pred_bfs_array(int x, vector<int> &bfs_arr) {
-  int cur = bfs_arr[0];
-}
-
 int bin_search(int(*left)(const int, const int),   //function pointer on how to go left in bst
 	       int(*right)(const int, const int),  //function pointer on how to go right in bst
 	       int height,                         //current height in the search
@@ -177,31 +172,19 @@ void preprocess_bfs_array(struct Node *BST, vector<int> &bfs_arr) {
   }
 }
 
-int pred_dfs(int x, vector<int> &arr) {
-  if (x < arr[0]) return -1;
-  int cur_root = 0;
-  int height = ceil(log2((int)arr.size()));
-  int right = dfs_right(cur_root, height);
-  int left = dfs_left(cur_root, height);
-  int old_root = 0;
-  while (height > 0) {
-    printf("%d %d %d %d\n", cur_root, old_root, left, right);
-    old_root = cur_root;
-    if (arr[right] <= x) cur_root = right;
-    else if (arr[left] <= x) cur_root = left;
-    else return arr[cur_root];
-    --height;
-    right = dfs_right(cur_root, height);
-    left = dfs_left(cur_root, height);
-  }
-  return arr[old_root];
-}
-
 vector<int> sorted_array_to_dfs_tree(vector<int> sorted_arr) {
   struct Node *BST = sorted_array_to_BST(sorted_arr, 0, sorted_arr.size());
   vector<int> result;
   result.resize(SIZE);
   preprocess_dfs_array(BST, result);
+  return result;
+}
+
+vector<int> sorted_array_to_bfs_tree(vector<int> sorted_arr) {
+  struct Node *BST = sorted_array_to_BST(sorted_arr, 0, sorted_arr.size());
+  vector<int> result;
+  result.resize(SIZE);
+  preprocess_bfs_array(BST, result);
   return result;
 }
 
@@ -211,8 +194,13 @@ int main() {
   a.resize(SIZE);
   vector<int> dfs = sorted_array_to_dfs_tree(a);
   print_array(dfs);
+
+  vector<int> bfs = sorted_array_to_bfs_tree(a);
+  print_array(bfs);
+
   printf("tree min: %d\n", dfs[tree_minimum(dfs_left, 8, ceil(log2((int)dfs.size())))-1]);
-  printf("tree pre: %d\n", tree_predecessor(dfs_left, dfs_right, dfs, 0, ceil(log2((int)dfs.size())), 0));
+  printf("tree pre dfs: %d\n", tree_predecessor(dfs_left, dfs_right, dfs, 10, ceil(log2((int)dfs.size())), 0));
+  printf("tree pre bfs: %d\n", tree_predecessor(bfs_left, bfs_right, bfs, 10, ceil(log2((int)dfs.size())), 0));
   printf("%d\n", bin_search(dfs_left, dfs_right, ceil(log2((int)dfs.size())), dfs, 1, 0));
   return 0;
 }
