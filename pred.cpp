@@ -6,16 +6,13 @@
 #include <vector>
 #include <queue>
 #include <papi.h>
+#include <math.h>
 
-#define SIZE 1024*16
+#define SIZE 15
 #define NUM_QUERIES 2
 #define MAX_NUM 1024 * 1024 * 1024
 
 using namespace std;
-
-vector<int> sorted_arr;
-vector<int> dfs_arr;
-vector<int> bfs_arr;
 
 struct Node {
   int data;
@@ -41,7 +38,7 @@ struct Node* sorted_array_to_BST(vector<int> a, int start, int end) {
 }
 
 //predecessor query using binary search in a sorted array
-int pred_sorted_array(int x) {
+int pred_sorted_array(int x, vector<int> &sorted_arr) {
 
   int mi = 0, ma = SIZE-1;
   int mid;
@@ -60,7 +57,7 @@ int pred_sorted_array(int x) {
 }
 
 //predecessor query using std::lower_bound method in a sorted sorted_array
-int pred_lower_bound(int x) {
+int pred_lower_bound(int x, vector<int> &sorted_arr) {
   vector<int>::iterator it = lower_bound(sorted_arr.begin(), sorted_arr.end(), x);
   if (*it == x) return x;
   if (it == sorted_arr.begin()) return -1;
@@ -68,19 +65,49 @@ int pred_lower_bound(int x) {
 }
 
 //predecessor query in a bfs layout tree
-int pred_bfs_array(int x) {
-
+int pred_bfs_array(int x, vector<int> &bfs_arr) {
   int cur = bfs_arr[0];
-  
-
 }
 
-int bfs_right(int x) {
+int bin_search(int(*left)(const int, const int),   //function pointer on how to go left in bst
+	       int(*right)(const int, const int),  //function pointer on how to go right in bst
+	       int height,                         //current height in the search
+	       vector<int> &arr,                   //arr describing the bst
+	       int element,                        //the element to search for
+	       int root) {                         //current position in tree
+  printf("%d %d %d %d %d %d\n", height, element, root, arr[root], left(root,height), right(root,height));
+  if (root > SIZE) return -1;
+  if (element == arr[root]) return element;
+  if (element < arr[root])
+    return bin_search(left, right, height-1, arr, element, left(root, height));
+  else
+    return bin_search(left, right, height-1, arr, element, right(root, height));
+}
+
+
+
+int bfs_right(int x, int height) {
   return (x+1)*2;
 }
 
-int bfs_left(int x) {
+int bfs_left(int x, int height) {
   return x*2+1;
+}
+
+int dfs_left(int x, int height) {
+  return x+1;
+}
+
+int dfs_right(int x, int height) {
+  return x + pow(2, height - 1);
+}
+
+int inorder_left(int x, int height) {
+  return x - pow(2, height - 2);
+}
+
+int inorder_right(int x, int height) {
+  return x + pow(2, height - 2);
 }
 
 void print_array(vector<int> a) {
@@ -90,20 +117,19 @@ void print_array(vector<int> a) {
   puts("");
 }
 
-void preprocess_sorted_array() {
-  sort(sorted_arr.begin(),sorted_arr.end());
-  //print_array(sorted_arr);
+void preprocess_sorted_array(vector<int> &a) {
+  sort(a.begin(), a.end());
 }
 
 int cur = 0;
-void preprocess_dfs_array(struct Node *BST) {
+void preprocess_dfs_array(struct Node *BST, vector<int> &ret) {
   if (BST == NULL) return;
-  dfs_arr[cur++] = BST->data;
-  preprocess_dfs_array(BST->left);
-  preprocess_dfs_array(BST->right);
+  ret[cur++] = BST->data;
+  preprocess_dfs_array(BST->left, ret);
+  preprocess_dfs_array(BST->right, ret);
 }
 
-void preprocess_bfs_array(struct Node *BST) {
+void preprocess_bfs_array(struct Node *BST, vector<int> &bfs_arr) {
   queue<struct Node*> Q;
   int next = 0;
   Q.push(BST);
@@ -117,7 +143,46 @@ void preprocess_bfs_array(struct Node *BST) {
   }
 }
 
-int main () {
+int pred_dfs(int x, vector<int> &arr) {
+  if (x < arr[0]) return -1;
+  int cur_root = 0;
+  int height = ceil(log2((int)arr.size()));
+  int right = dfs_right(cur_root, height);
+  int left = dfs_left(cur_root, height);
+  int old_root = 0;
+  while (height > 0) {
+    printf("%d %d %d %d\n", cur_root, old_root, left, right);
+    old_root = cur_root;
+    if (arr[right] <= x) cur_root = right;
+    else if (arr[left] <= x) cur_root = left;
+    else return arr[cur_root];
+    --height;
+    right = dfs_right(cur_root, height);
+    left = dfs_left(cur_root, height);
+  }
+  return arr[old_root];
+}
+
+vector<int> sorted_array_to_dfs_tree(vector<int> sorted_arr) {
+  struct Node *BST = sorted_array_to_BST(sorted_arr, 0, sorted_arr.size());
+  vector<int> result;
+  result.resize(SIZE);
+  preprocess_dfs_array(BST, result);
+  return result;
+}
+
+int main() {
+
+  vector<int> a;
+  for (int i = 1; i <= 15; i++) a.push_back(i);
+  a.resize(SIZE);
+  vector<int> dfs = sorted_array_to_dfs_tree(a);
+  print_array(dfs);
+  printf("%d\n", bin_search(dfs_left, dfs_right, ceil(log2((int)dfs.size())), dfs, 1, 0));
+  return 0;
+}
+
+int main2 () {
 
   int eventset = PAPI_NULL;
   long long values[1] = {0};
@@ -129,38 +194,15 @@ int main () {
 
   PAPI_start(eventset);
 
-  printf("%d %d %d %d\n", bfs_left(0), bfs_left(2), bfs_right(0), bfs_right(2));
-
+  vector<int> arr;
+  arr.resize(SIZE);
   //initialize seed
   srand (time(NULL));
-  //  fill the sorted_array with random numbers
-  sorted_arr.resize(SIZE);
-  bfs_arr.resize(SIZE);
-  dfs_arr.resize(SIZE);
-
+  //  fill the array with random numbers
+  
   for (int i = 0; i < SIZE; i++) {
     int r = rand() % MAX_NUM;
-    sorted_arr[i] = r;
-  }
-  
-  preprocess_sorted_array();
-  struct Node *BST = sorted_array_to_BST(sorted_arr, 0, sorted_arr.size());
-
-  preprocess_dfs_array(BST);
-  //print_array(dfs_arr); 
-  preprocess_bfs_array(BST);
-  //print_array(bfs_arr);
-
-  //make random queries using binary search in sorted sorted_array
-  for (int i = 0; i < NUM_QUERIES; i++) {
-    int x = rand() % MAX_NUM; //rand below SIZE
-    printf("pred of %d is %d\n", x, pred_sorted_array(x));
-  }
-
-  //make random queries using binary search in sorted sorted_array
-  for (int i = 0; i < NUM_QUERIES; i++) {
-    int x = rand() % MAX_NUM; //rand below SIZE
-    printf("pred of %d is %d\n", x, pred_lower_bound(x));
+    arr[i] = r;
   }
 
   PAPI_read(eventset, values);
