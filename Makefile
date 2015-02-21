@@ -1,5 +1,5 @@
 CXX=g++
-CXXFLAGS=-Wall
+CXXFLAGS=-Wall -O2
 .PHONY: pred
 pred:
 	rm -f pred

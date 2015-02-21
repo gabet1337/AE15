@@ -8,7 +8,8 @@
 #include <math.h>
 #include <iostream>
 #include <fstream>
-
+#include <string>
+#include <cstring>
 //2e12*4
 //#define SIZE 16383
 //2e16*4
@@ -21,16 +22,24 @@
 #define NUM_EXPERIMENTS 42
 
 using namespace std;
+typedef long long ll;
+typedef pair<ll, ll> llll;
 
 void clear_cache() {
   ofstream ofs("/proc/sys/vm/drop_caches");
   ofs << "3" << endl;
 }
 
-void print_to_plot(vector<pair<int,long long> > &data) {
+void print_to_plot(vector<pair<int,double> > &data, char* fname) {
+  ofstream myfile;
+  myfile.open(fname);
   cout << "#x\ty" << endl;
-  for (size_t i = 0; i < data.size(); i++)
+  myfile << "#x\ty" << endl;
+  for (size_t i = 0; i < data.size(); i++) {
+    myfile << data[i].first << "\t" << data[i].second << endl;
     cout << data[i].first << "\t" << data[i].second << endl;
+  }
+  myfile.close();
 }
 
 struct Node {
@@ -188,8 +197,7 @@ void preprocess_inorder_array_rec(struct Node *n, int root, int height, vector<i
     preprocess_inorder_array_rec(n->right, inorder_right(root, height), height-1, res);
 }
 
-vector<int> sorted_array_to_dfs_tree(vector<int> &sorted_arr, size_t s) {
-  struct Node *BST = sorted_array_to_BST(sorted_arr, 0, s-1);
+vector<int> sorted_array_to_dfs_tree(struct Node *BST, vector<int> &sorted_arr, size_t s) {
   vector<int> result;
   int height = ceil(log2((int)s+1));
   int size = pow(2,height+1)-1;
@@ -199,8 +207,7 @@ vector<int> sorted_array_to_dfs_tree(vector<int> &sorted_arr, size_t s) {
   return result;
 }
 
-vector<int> sorted_array_to_bfs_tree(vector<int> &sorted_arr, size_t s) {
-  struct Node *BST = sorted_array_to_BST(sorted_arr, 0, s-1);
+vector<int> sorted_array_to_bfs_tree(struct Node *BST, vector<int> &sorted_arr, size_t s) {
   vector<int> result;
   int height = ceil(log2((int)s+1));
   int size = pow(2,height+1)-1;
@@ -210,8 +217,7 @@ vector<int> sorted_array_to_bfs_tree(vector<int> &sorted_arr, size_t s) {
   return result;
 }
 
-vector<int> sorted_array_to_inorder_tree(vector<int> &sorted_arr, size_t s) {
-  struct Node *BST = sorted_array_to_BST(sorted_arr, 0, s-1);
+vector<int> sorted_array_to_inorder_tree(struct Node *BST, vector<int> &sorted_arr, size_t s) {
   vector<int> result;
   int height = ceil(log2((int)s+1));
   int size = pow(2,height+1)-1;
@@ -221,61 +227,7 @@ vector<int> sorted_array_to_inorder_tree(vector<int> &sorted_arr, size_t s) {
   return result;
 }
 
-void test2() {
-  for (int expo = 3; expo <= 22; expo++) {
-    vector<int> sorted_arr;
-    int s = pow(2,expo)-1;
-
-    sorted_arr.resize(s);
-    //initialize seed
-    srand (time(NULL));
-    //fill the array with random numbers
-  
-    for (int i = 0; i < s; i++) {
-      int r = rand() % MAX_NUM;
-      // cout << r << endl;
-      sorted_arr[i] = r;
-    }
-
-    preprocess_sorted_array(sorted_arr);
-    // print_array(sorted_arr);
-    //vector<int> dfs = sorted_array_to_dfs_tree(sorted_arr,s);
-    //vector<int> bfs = sorted_array_to_bfs_tree(sorted_arr,s);
-    vector<int> inorder = sorted_array_to_inorder_tree(sorted_arr,s);
-    // print_array(inorder);
-    // print_array(dfs);
-    // print_array(bfs);
-    // print_array(inorder);
-    //vector<int> inorder = sorted_arr;
-    PAPI_library_init(PAPI_VER_CURRENT);
-    int eventset = PAPI_NULL;
-    PAPI_create_eventset(&eventset);
-    PAPI_add_event(eventset, PAPI_L2_TCM);
-    long long values[1] = {0};
-    PAPI_start(eventset);
-    for (int i = 0; i < 1e6; i++) {
-      int x = rand() % MAX_NUM;
-      int height = ceil(log2((int)s));
-  
-      //int std_pred = pred_lower_bound(x, sorted_arr);
-      //int dfs_pred = tree_predecessor(dfs_left, dfs_right, dfs, x, height, 0);
-      //int bfs_pred = tree_predecessor(bfs_left, bfs_right, bfs, x, height, 0);
-      int inorder_pred = tree_predecessor(inorder_left, inorder_right, inorder, x, height, inorder.size()/2-1);
-      inorder_pred++;
-      // printf("predecessor of %d is %d\n",x, inorder_pred); 
-      //int bin_search = pred_sorted_array(x, sorted_arr);
-
-      //printf("%d %d %d %d %d\n", std_pred, dfs_pred, bfs_pred, inorder_pred, bin_search);
-    }
-    PAPI_read(eventset,values);
-    cout << expo << " " <<  values[0] << endl;
-    PAPI_stop(eventset, values);
-
-  }
-}
-
 void test() {
-
   vector<int> sorted_arr;
   int s = (1<<20)-1;
   sorted_arr.resize(s);
@@ -289,10 +241,11 @@ void test() {
   }
 
   preprocess_sorted_array(sorted_arr);
+  struct Node *BST = sorted_array_to_BST(sorted_arr, 0, s-1);
   // print_array(sorted_arr);
-  vector<int> dfs = sorted_array_to_dfs_tree(sorted_arr,s);
-  vector<int> bfs = sorted_array_to_bfs_tree(sorted_arr,s);
-  vector<int> inorder = sorted_array_to_inorder_tree(sorted_arr,s);
+  vector<int> dfs = sorted_array_to_dfs_tree(BST, sorted_arr,s);
+  vector<int> bfs = sorted_array_to_bfs_tree(BST, sorted_arr,s);
+  vector<int> inorder = sorted_array_to_inorder_tree(BST, sorted_arr,s);
   // print_array(dfs);
   // print_array(bfs);
   // print_array(inorder);
@@ -321,55 +274,25 @@ void test() {
   PAPI_stop(eventset, values);
 }
 
-void test_bfs() {
-  PAPI_library_init(PAPI_VER_CURRENT);
-  for (size_t i = 2; i < 25; i++) {
-    size_t s = (1<<i)-1;
-    vector<int> sorted_arr;
-    sorted_arr.resize(s);
-    for (size_t k = 0; k < s; k++) {
-      sorted_arr[k] = rand() % MAX_NUM;
-    }
-    preprocess_sorted_array(sorted_arr);
-    vector<int> bfs = sorted_array_to_bfs_tree(sorted_arr, s);
-    int height = ceil(log2((int)s));
-    
-    int eventset = PAPI_NULL;
-    PAPI_create_eventset(&eventset);
-    PAPI_add_event(eventset, PAPI_L2_TCM);
-    long long values[1] = {(long long) 0};
-    PAPI_start(eventset);
-    srand(time(NULL));
-    for (size_t j = 0; j < 1e6; j++) {
-      int p = tree_predecessor(bfs_left, bfs_right, bfs, rand() % MAX_NUM, height, 0);
-      cout << p << endl;
-    }
-    PAPI_read(eventset, values);
-    cout << i << "\t" << values[0] << endl;
-    PAPI_stop(eventset, values);
-
-  }
-}
-
-long long tester(int(*left)(const int, const int),
-                 int(*right)(const int, const int),
-                 vector<int> &arr,
-                 int height,
-                 int root) {
+llll tester(int(*left)(const int, const int),
+                                  int(*right)(const int, const int),
+                                  vector<int> &arr,
+                                  int height,
+                                  int root) {
 
   PAPI_library_init(PAPI_VER_CURRENT);
 
-  int evts[2] = {PAPI_TOT_INS, PAPI_L2_TCA};
+  int evts[2] = {PAPI_BR_MSP, PAPI_BR_CN};
   long long values[2];
   
-  long long average = 0;
-
+  long long val1 = 0;
+  long long val2 = 0;
   for (int ex = 0; ex < NUM_EXPERIMENTS; ex++) {
     clear_cache();
 
     PAPI_start_counters(evts, 2);
 
-    //run predecessor query
+    //run predecessor queries
     for (size_t i = 0; i < NUM_QUERIES; i++) {
       int r = rand() % MAX_NUM;
       int p = tree_predecessor(left, right, arr, r, height, root);
@@ -378,11 +301,12 @@ long long tester(int(*left)(const int, const int),
     //read & stop
     PAPI_stop_counters(values, 2);
     // cout << values[0] << endl;
-    average += values[1];
+    val1 += values[0];
+    val2 += values[1];
 
   }
 
-  return average/NUM_EXPERIMENTS;
+  return make_pair(val1/NUM_EXPERIMENTS, val2/NUM_EXPERIMENTS);
 }
 
 int main() {
@@ -391,9 +315,9 @@ int main() {
   //test();
   //return 0;
 
-  vector<pair<int,long long> > inorder_res, dfs_res, bfs_res;
+  vector<pair<int, double > > inorder_res, dfs_res, bfs_res;
   //initialize seed
-  for (int ex = 9; ex <= 14; ex++) {
+  for (int ex = 2; ex <= 25; ex++) {
     size_t s = pow(2,ex)-1;
     cout << "Running experiment on input size: " << s << endl;
 
@@ -407,10 +331,10 @@ int main() {
     }
 
     preprocess_sorted_array(sorted_arr);
-
-    vector<int> dfs = sorted_array_to_dfs_tree(sorted_arr,s);
-    vector<int> bfs = sorted_array_to_bfs_tree(sorted_arr,s);
-    vector<int> inorder = sorted_array_to_inorder_tree(sorted_arr,s);
+    struct Node *BST = sorted_array_to_BST(sorted_arr, 0, s-1);
+    vector<int> dfs = sorted_array_to_dfs_tree(BST,sorted_arr,s);
+    vector<int> bfs = sorted_array_to_bfs_tree(BST,sorted_arr,s);
+    vector<int> inorder = sorted_array_to_inorder_tree(BST,sorted_arr,s);
     // print_array(dfs);
     // print_array(bfs);
     // print_array(inorder);
@@ -419,23 +343,34 @@ int main() {
     int dfs_height = ceil(log2((int)dfs.size()));
     int inorder_root = inorder.size()/2-1;
 
-    bfs_res.push_back(make_pair(ex, tester(bfs_left, bfs_right, bfs,
-                                           bfs_height, 0)));
+    llll bfs_test = tester(bfs_left, bfs_right, bfs, bfs_height, 0);
+    llll dfs_test = tester(dfs_left, dfs_right, dfs, dfs_height, 0);
+    llll ino_test = tester(inorder_left, inorder_right, inorder, inorder_height, inorder_root);
+
+
+    // ratios
+    bfs_res.push_back(make_pair(s+1, (double)bfs_test.first/(double)bfs_test.second));
+    dfs_res.push_back(make_pair(s+1, (double)dfs_test.first/(double)dfs_test.second));
+    inorder_res.push_back(make_pair(s+1, (double)ino_test.first/(double)ino_test.second));
+    
+
+    // bfs_res.push_back(make_pair(ex, tester(bfs_left, bfs_right, bfs,
+    //                                        bfs_height, 0)));
 
     
-    dfs_res.push_back(make_pair(ex, tester(dfs_left, dfs_right, dfs,
-                                           dfs_height,0)));
+    // dfs_res.push_back(make_pair(ex, tester(dfs_left, dfs_right, dfs,
+    //                                        dfs_height,0)));
     
-    inorder_res.push_back(make_pair
-                          (ex, tester(inorder_left, inorder_right,
-                                      inorder, inorder_height, inorder_root)));
-  } 
+    // inorder_res.push_back(make_pair
+    //                       (ex, tester(inorder_left, inorder_right,
+    //                                   inorder, inorder_height, inorder_root)));
+  }
   cout << "INORDER" << endl;
-  print_to_plot(inorder_res);
+  print_to_plot(inorder_res, "INO.dat");
   cout << "BFS" << endl;
-  print_to_plot(bfs_res);
+  print_to_plot(bfs_res, "BFS.dat");
   cout << "DFS" << endl;
-  print_to_plot(dfs_res);
+  print_to_plot(dfs_res, "DFS.dat");
 
   return 0;
 }
