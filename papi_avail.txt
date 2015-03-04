@@ -1,13 +1,15 @@
-    Name        Code    Avail Deriv Description (Note)
-PAPI_L1_DCM  0x80000000  Yes   No   Level 1 data cache misses
-PAPI_L1_ICM  0x80000001  Yes   No   Level 1 instruction cache misses
-PAPI_L2_DCM  0x80000002  Yes   Yes  Level 2 data cache misses
-PAPI_L2_ICM  0x80000003  Yes   No   Level 2 instruction cache misses
 PAPI_L1_TCM  0x80000006  Yes   Yes  Level 1 cache misses
 PAPI_L2_TCM  0x80000007  Yes   No   Level 2 cache misses
 PAPI_L3_TCM  0x80000008  Yes   No   Level 3 cache misses
+PAPI_BR_MSP  0x8000002e  Yes   No   Conditional branch instructions mispredicted
 PAPI_TLB_DM  0x80000014  Yes   Yes  Data translation lookaside buffer misses
 PAPI_TLB_IM  0x80000015  Yes   No   Instruction translation lookaside buffer misses
+PAPI_TOT_INS 0x80000032  Yes   No   Instructions completed
+PAPI_L1_DCM  0x80000000  Yes   No   Level 1 data cache misses
+PAPI_L2_DCM  0x80000002  Yes   Yes  Level 2 data cache misses
+---
+PAPI_L1_ICM  0x80000001  Yes   No   Level 1 instruction cache misses
+PAPI_L2_ICM  0x80000003  Yes   No   Level 2 instruction cache misses
 PAPI_L1_LDM  0x80000017  Yes   No   Level 1 load misses
 PAPI_L1_STM  0x80000018  Yes   No   Level 1 store misses
 PAPI_L2_STM  0x8000001a  Yes   No   Level 2 store misses
@@ -16,9 +18,7 @@ PAPI_BR_UCN  0x8000002a  Yes   Yes  Unconditional branch instructions
 PAPI_BR_CN   0x8000002b  Yes   No   Conditional branch instructions
 PAPI_BR_TKN  0x8000002c  Yes   Yes  Conditional branch instructions taken
 PAPI_BR_NTK  0x8000002d  Yes   No   Conditional branch instructions not taken
-PAPI_BR_MSP  0x8000002e  Yes   No   Conditional branch instructions mispredicted
 PAPI_BR_PRC  0x8000002f  Yes   Yes  Conditional branch instructions correctly predicted
-PAPI_TOT_INS 0x80000032  Yes   No   Instructions completed
 PAPI_FP_INS  0x80000034  Yes   Yes  Floating point instructions
 PAPI_LD_INS  0x80000035  Yes   No   Load instructions
 PAPI_SR_INS  0x80000036  Yes   No   Store instructions
