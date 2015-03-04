@@ -102,33 +102,36 @@ int tree_predecessor(int(*left)(const int, const int),
   return result;
 }
 
-int bfs_right(int x, int height) {
-  return (x+1)*2;
+inline int bfs_right(int x, int height) {
+  return (x+1)<<1;
 }
 
-int bfs_left(int x, int height) {
-  return x*2+1;
+inline int bfs_left(int x, int height) {
+  return (x<<1)+1;
 }
 
-int dfs_left(int x, int height) {
+inline int dfs_left(int x, int height) {
   return x+1;
 }
 
-int dfs_right(int x, int height) {
-  return x + pow(2, height - 1);
+inline int dfs_right(int x, int height) {
+  // return x + pow(2, height - 1);
+  return x + (1<<(height-1));
 }
 
-int inorder_left(int x, int height) {
-  return x - pow(2, height - 2);
+inline int inorder_left(int x, int height) {
+  // return x - pow(2, height - 2);
+  return x - (1<<(height-2));
 }
 
-int inorder_right(int x, int height) {
-  return x + pow(2, height - 2);
+inline int inorder_right(int x, int height) {
+  // return x + pow(2, height - 2);
+  return x + (1<<(height-2));
 }
 
 void print_array(vector<int> a) {
   printf("size %d \n", (int)a.size());
-  for (int i = 0; i < a.size(); i++)
+  for (size_t i = 0; i < a.size(); i++)
     printf("%d ", a[i]);
   puts("");
 }
@@ -243,7 +246,7 @@ void tester(int(*left)(const int, const int),
             int height,
             int root,
             vector<int> events) {
-  int numEvents = (int)events.size();
+  // int numEvents = (int)events.size();
   
   int eventset = PAPI_NULL;
   long long values[1] = {0};
@@ -251,7 +254,7 @@ void tester(int(*left)(const int, const int),
   PAPI_library_init(PAPI_VER_CURRENT);
 
   PAPI_create_eventset(&eventset);
-  PAPI_add_event(eventset, PAPI_TOT_INS);
+  PAPI_add_event(eventset, PAPI_L1_DCA);
 
   PAPI_start(eventset);
 
@@ -270,7 +273,7 @@ int main() {
   vector<int> events;
   events.push_back(PAPI_L1_DCA);
 
-  // test();
+  // test(); 
   vector<int> sorted_arr;
   sorted_arr.resize(SIZE);
   //initialize seed
