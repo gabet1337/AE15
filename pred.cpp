@@ -1,3 +1,4 @@
+//TODO: shift left instead of multiply 2
 #include <stdio.h>      /* printf, scanf, puts, NULL */
 #include <stdlib.h>     /* srand, rand */
 #include <time.h>       /* time */
@@ -6,10 +7,11 @@
 #include <queue>
 #include <papi.h>
 #include <math.h>
+#include <iostream>
 
-#define SIZE 1024*1024-1
+#define SIZE 100
 #define NUM_QUERIES 2
-#define MAX_NUM 1024 * 1024
+#define MAX_NUM 1000000
 
 using namespace std;
 
@@ -101,8 +103,8 @@ int tree_predecessor(int(*left)(const int, const int),
 		     int height,
 		     int root) {
   int result = -1;
-
-  while (height) {
+  int size = (int)arr.size();
+  while (height && root < size && root >= 0 && arr[root] != -1) {
     if (arr[root] > elem)
       root = left(root,height);
     else {
@@ -111,6 +113,7 @@ int tree_predecessor(int(*left)(const int, const int),
     }
     --height;
   }
+  
   return result;
 }
 
@@ -149,41 +152,66 @@ void preprocess_sorted_array(vector<int> &a) {
   sort(a.begin(), a.end());
 }
 
-int cur = 0;
-void preprocess_dfs_array(struct Node *BST, vector<int> &ret) {
-  if (BST == NULL) return;
-  ret[cur++] = BST->data;
-  preprocess_dfs_array(BST->left, ret);
-  preprocess_dfs_array(BST->right, ret);
+void preprocess_dfs_array_rec(struct Node *n, int root, int height, vector<int> &res) {
+  if (n != NULL)
+    res[root] = n->data;
+  else return;
+  if (dfs_left(root, height) < (int)res.size())
+    preprocess_dfs_array_rec(n->left, dfs_left(root, height), height-1, res);
+  if (dfs_right(root, height) < (int)res.size())
+    preprocess_dfs_array_rec(n->right, dfs_right(root, height), height-1, res);
 }
 
-void preprocess_bfs_array(struct Node *BST, vector<int> &bfs_arr) {
-  queue<struct Node*> Q;
-  int next = 0;
-  Q.push(BST);
-  while (!Q.empty()) {
-    struct Node* t = Q.front(); Q.pop();
-    bfs_arr[next++] = t->data;
-    if (t->left != NULL)
-      Q.push(t->left);
-    if (t->right != NULL)
-      Q.push(t->right);
-  }
+void preprocess_bfs_array_rec(struct Node *n, int root, int height, vector<int> &res) {
+  if (n != NULL)
+    res[root] = n->data;
+  else return;
+  if (bfs_left(root, height) < (int)res.size())
+    preprocess_bfs_array_rec(n->left, bfs_left(root, height), height-1, res);
+  if (bfs_right(root, height) < (int)res.size())
+    preprocess_bfs_array_rec(n->right, bfs_right(root, height), height-1, res);
+}
+
+void preprocess_inorder_array_rec(struct Node *n, int root, int height, vector<int> &res) {
+  if (n != NULL)
+    res[root] = n->data;
+  else return;
+  if (inorder_left(root, height < (int)res.size() && inorder_left(root,height) >= 0))
+    preprocess_inorder_array_rec(n->left, inorder_left(root, height), height-1, res);
+  if (inorder_right(root, height < (int)res.size() && inorder_right(root,height) >= 0))
+    preprocess_inorder_array_rec(n->right, inorder_right(root, height), height-1, res);
 }
 
 vector<int> sorted_array_to_dfs_tree(vector<int> &sorted_arr) {
-  struct Node *BST = sorted_array_to_BST(sorted_arr, 0, sorted_arr.size());
+  struct Node *BST = sorted_array_to_BST(sorted_arr, 0, SIZE-1);
   vector<int> result;
-  result.resize(SIZE);
-  preprocess_dfs_array(BST, result);
+  int height = ceil(log2((int)SIZE));
+  int size = pow(2,height)-1;
+  result.resize(size);
+  for (int i = 0; i < size; i++) result[i] = -1;
+  preprocess_dfs_array_rec(BST, 0, height, result);
   return result;
 }
 
 vector<int> sorted_array_to_bfs_tree(vector<int> &sorted_arr) {
-  struct Node *BST = sorted_array_to_BST(sorted_arr, 0, sorted_arr.size());
+  struct Node *BST = sorted_array_to_BST(sorted_arr, 0, SIZE-1);
   vector<int> result;
-  result.resize(SIZE);
-  preprocess_bfs_array(BST, result);
+  int height = ceil(log2((int)SIZE));
+  int size = pow(2,height)-1;
+  result.resize(size);
+  for (int i = 0; i < size; i++) result[i] = -1;
+  preprocess_bfs_array_rec(BST, 0, height, result);
+  return result;
+}
+
+vector<int> sorted_array_to_inorder_tree(vector<int> &sorted_arr) {
+  struct Node *BST = sorted_array_to_BST(sorted_arr, 0, SIZE-1);
+  vector<int> result;
+  int height = ceil(log2((int)SIZE));
+  int size = pow(2,height)-1;
+  result.resize(size);
+  for (int i = 0; i < size; i++) result[i] = -1;
+  preprocess_inorder_array_rec(BST, size/2-1, height, result);
   return result;
 }
 
@@ -201,19 +229,24 @@ void test() {
   }
 
   preprocess_sorted_array(sorted_arr);
-  //print_array(sorted_arr);
+  // print_array(sorted_arr);
   vector<int> dfs = sorted_array_to_dfs_tree(sorted_arr);
   vector<int> bfs = sorted_array_to_bfs_tree(sorted_arr);
+  vector<int> inorder = sorted_array_to_inorder_tree(sorted_arr);
+  // print_array(dfs);
+  // print_array(bfs);
+  // print_array(inorder);
   //vector<int> inorder = sorted_arr;
   int x = rand() % MAX_NUM;
+  cout << x << endl;
   int height = ceil(log2((int)SIZE));
   int std_pred = pred_lower_bound(x, sorted_arr);
   int dfs_pred = tree_predecessor(dfs_left, dfs_right, dfs, x, height, 0);
   int bfs_pred = tree_predecessor(bfs_left, bfs_right, bfs, x, height, 0);
-  //int inorder_pred = tree_predecessor(inorder_left, inorder_right, sorted_arr, x, height, SIZE/2);
+  int inorder_pred = tree_predecessor(inorder_left, inorder_right, inorder, x, height, inorder.size()/2-1);
   int bin_search = pred_sorted_array(x, sorted_arr);
 
-  printf("%d %d %d %d\n", std_pred, dfs_pred, bfs_pred, bin_search);
+  printf("%d %d %d %d %d\n", std_pred, dfs_pred, bfs_pred, inorder_pred, bin_search);
 
 }
 
