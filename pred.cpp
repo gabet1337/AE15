@@ -1,4 +1,3 @@
-//TODO: shift left instead of multiply 2
 #include <stdio.h>      /* printf, scanf, puts, NULL */
 #include <stdlib.h>     /* srand, rand */
 #include <time.h>       /* time */
@@ -8,12 +7,20 @@
 #include <papi.h>
 #include <math.h>
 #include <iostream>
+#include <fstream>
 
-#define SIZE 5000000
+#define SIZE 50000000
 #define NUM_QUERIES 2
 #define MAX_NUM 100000000
 
 using namespace std;
+
+void clear_cache() {
+  sync();
+  ofstream ofs("/proc/sys/vm/drop_caches");
+  ofs << "3" << endl;
+  sync();
+}
 
 struct Node {
   int data;
@@ -254,7 +261,7 @@ void tester(int(*left)(const int, const int),
   PAPI_library_init(PAPI_VER_CURRENT);
 
   PAPI_create_eventset(&eventset);
-  PAPI_add_event(eventset, PAPI_L1_DCA);
+  PAPI_add_event(eventset, PAPI_L1_DCM);
 
   PAPI_start(eventset);
 
