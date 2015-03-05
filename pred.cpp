@@ -195,7 +195,7 @@ vector<int> sorted_array_to_dfs_tree(vector<int> &sorted_arr, size_t s) {
   int size = pow(2,height+1)-1;
   result.resize(size);
   for (int i = 0; i < size; i++) result[i] = -1;
-  preprocess_dfs_array_rec(BST, 0, height, result);
+  preprocess_dfs_array_rec(BST, 0, height+1, result);
   return result;
 }
 
@@ -206,7 +206,7 @@ vector<int> sorted_array_to_bfs_tree(vector<int> &sorted_arr, size_t s) {
   int size = pow(2,height+1)-1;
   result.resize(size);
   for (int i = 0; i < size; i++) result[i] = -1;
-  preprocess_bfs_array_rec(BST, 0, height, result);
+  preprocess_bfs_array_rec(BST, 0, height+1, result);
   return result;
 }
 
@@ -217,7 +217,7 @@ vector<int> sorted_array_to_inorder_tree(vector<int> &sorted_arr, size_t s) {
   int size = pow(2,height+1)-1;
   result.resize(size);
   for (int i = 0; i < size; i++) result[i] = -1;
-  preprocess_inorder_array_rec(BST, size/2-1, height, result);
+  preprocess_inorder_array_rec(BST, size/2-1, height+1, result);
   return result;
 }
 
@@ -352,10 +352,10 @@ void test_bfs() {
 }
 
 long long tester(int(*left)(const int, const int),
-            int(*right)(const int, const int),
-            vector<int> &arr,
-            int height,
-            int root) {
+                 int(*right)(const int, const int),
+                 vector<int> &arr,
+                 int height,
+                 int root) {
 
   PAPI_library_init(PAPI_VER_CURRENT);
 
@@ -365,7 +365,7 @@ long long tester(int(*left)(const int, const int),
   long long average = 0;
 
   for (int ex = 0; ex < NUM_EXPERIMENTS; ex++) {
-    // clear_cache();
+    clear_cache();
 
     PAPI_start_counters(evts, 2);
 
@@ -388,21 +388,18 @@ long long tester(int(*left)(const int, const int),
 int main() {
   srand (time(NULL));
   //test_bfs();
-  //test2();
+  //test();
   //return 0;
-
-  vector<int> events;
-  events.push_back(PAPI_L1_TCM);
 
   vector<pair<int,long long> > inorder_res, dfs_res, bfs_res;
   //initialize seed
-  for (int ex = 5; ex <= 20; ex++) {
-    size_t s = (1<<ex)-1;
+  for (int ex = 9; ex <= 14; ex++) {
+    size_t s = pow(2,ex)-1;
     cout << "Running experiment on input size: " << s << endl;
 
     vector<int> sorted_arr;
     sorted_arr.resize(s);
-
+    
     //fill the array with random numbers
     for (size_t i = 0; i < s; i++) {
       int r = rand() % MAX_NUM;
@@ -414,7 +411,9 @@ int main() {
     vector<int> dfs = sorted_array_to_dfs_tree(sorted_arr,s);
     vector<int> bfs = sorted_array_to_bfs_tree(sorted_arr,s);
     vector<int> inorder = sorted_array_to_inorder_tree(sorted_arr,s);
-    
+    // print_array(dfs);
+    // print_array(bfs);
+    // print_array(inorder);
     int inorder_height = ceil(log2((int)inorder.size()));
     int bfs_height = ceil(log2((int)bfs.size()));
     int dfs_height = ceil(log2((int)dfs.size()));
@@ -426,11 +425,11 @@ int main() {
     
     dfs_res.push_back(make_pair(ex, tester(dfs_left, dfs_right, dfs,
                                            dfs_height,0)));
-
+    
     inorder_res.push_back(make_pair
                           (ex, tester(inorder_left, inorder_right,
                                       inorder, inorder_height, inorder_root)));
-  }
+  } 
   cout << "INORDER" << endl;
   print_to_plot(inorder_res);
   cout << "BFS" << endl;
