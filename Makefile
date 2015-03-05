@@ -12,3 +12,7 @@ hw_counters:
 small:
 	rm -f small
 	$(CXX) -O3 small_test.cpp /usr/lib/x86_64-linux-gnu/libpapi.so -o small
+
+matrix:
+	rm -f matrix
+	$(CXX) -03 matrix.cpp /usr/lib/x86_64-linux-gnu/libpapi.so -i matrix
