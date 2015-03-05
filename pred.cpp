@@ -15,7 +15,7 @@
 //#define SIZE 262143
 //2e19*4
 
-#define NUM_QUERIES 10
+#define NUM_QUERIES 1e6
 // #define NUM_QUERIES 1
 #define MAX_NUM 10000000
 #define NUM_EXPERIMENTS 42
@@ -191,8 +191,8 @@ void preprocess_inorder_array_rec(struct Node *n, int root, int height, vector<i
 vector<int> sorted_array_to_dfs_tree(vector<int> &sorted_arr, size_t s) {
   struct Node *BST = sorted_array_to_BST(sorted_arr, 0, s-1);
   vector<int> result;
-  int height = ceil(log2((int)s));
-  int size = pow(2,height);
+  int height = ceil(log2((int)s+1));
+  int size = pow(2,height+1)-1;
   result.resize(size);
   for (int i = 0; i < size; i++) result[i] = -1;
   preprocess_dfs_array_rec(BST, 0, height, result);
@@ -202,8 +202,8 @@ vector<int> sorted_array_to_dfs_tree(vector<int> &sorted_arr, size_t s) {
 vector<int> sorted_array_to_bfs_tree(vector<int> &sorted_arr, size_t s) {
   struct Node *BST = sorted_array_to_BST(sorted_arr, 0, s-1);
   vector<int> result;
-  int height = ceil(log2((int)s));
-  int size = pow(2,height);
+  int height = ceil(log2((int)s+1));
+  int size = pow(2,height+1)-1;
   result.resize(size);
   for (int i = 0; i < size; i++) result[i] = -1;
   preprocess_bfs_array_rec(BST, 0, height, result);
@@ -213,8 +213,8 @@ vector<int> sorted_array_to_bfs_tree(vector<int> &sorted_arr, size_t s) {
 vector<int> sorted_array_to_inorder_tree(vector<int> &sorted_arr, size_t s) {
   struct Node *BST = sorted_array_to_BST(sorted_arr, 0, s-1);
   vector<int> result;
-  int height = ceil(log2((int)s));
-  int size = pow(2,height);
+  int height = ceil(log2((int)s+1));
+  int size = pow(2,height+1)-1;
   result.resize(size);
   for (int i = 0; i < size; i++) result[i] = -1;
   preprocess_inorder_array_rec(BST, size/2-1, height, result);
@@ -355,12 +355,11 @@ long long tester(int(*left)(const int, const int),
             int(*right)(const int, const int),
             vector<int> &arr,
             int height,
-            int root,
-            vector<int> &events) {
+            int root) {
 
   PAPI_library_init(PAPI_VER_CURRENT);
 
-  int evts[2] = {PAPI_TOT_INS, PAPI_L1_TCM};
+  int evts[2] = {PAPI_TOT_INS, PAPI_L2_TCA};
   long long values[2];
   
   long long average = 0;
@@ -369,8 +368,6 @@ long long tester(int(*left)(const int, const int),
     // clear_cache();
 
     PAPI_start_counters(evts, 2);
-
-    cout << " Hallo " << endl;
 
     //run predecessor query
     for (size_t i = 0; i < NUM_QUERIES; i++) {
@@ -381,7 +378,7 @@ long long tester(int(*left)(const int, const int),
     //read & stop
     PAPI_stop_counters(values, 2);
     // cout << values[0] << endl;
-    average += values[0];
+    average += values[1];
 
   }
 
@@ -418,21 +415,21 @@ int main() {
     vector<int> bfs = sorted_array_to_bfs_tree(sorted_arr,s);
     vector<int> inorder = sorted_array_to_inorder_tree(sorted_arr,s);
     
-    int inorder_height = ceil(log2((int)s));
-    int bfs_height = ceil(log2((int)s));
-    int dfs_height = ceil(log2((int)s));
+    int inorder_height = ceil(log2((int)inorder.size()));
+    int bfs_height = ceil(log2((int)bfs.size()));
+    int dfs_height = ceil(log2((int)dfs.size()));
     int inorder_root = inorder.size()/2-1;
 
     bfs_res.push_back(make_pair(ex, tester(bfs_left, bfs_right, bfs,
-                                           bfs_height, 0, events)));
+                                           bfs_height, 0)));
+
+    
+    dfs_res.push_back(make_pair(ex, tester(dfs_left, dfs_right, dfs,
+                                           dfs_height,0)));
 
     inorder_res.push_back(make_pair
                           (ex, tester(inorder_left, inorder_right,
-                                      inorder, inorder_height, inorder_root,
-                                      events)));
-    
-    dfs_res.push_back(make_pair(ex, tester(dfs_left, dfs_right, dfs,
-                                           dfs_height, 0, events)));
+                                      inorder, inorder_height, inorder_root)));
   }
   cout << "INORDER" << endl;
   print_to_plot(inorder_res);
