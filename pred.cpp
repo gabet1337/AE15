@@ -1,4 +1,3 @@
-//TODO: shift left instead of multiply 2
 #include <stdio.h>      /* printf, scanf, puts, NULL */
 #include <stdlib.h>     /* srand, rand */
 #include <time.h>       /* time */
@@ -9,7 +8,6 @@
 #include <math.h>
 #include <iostream>
 #include <fstream>
-#include <istream>
 
 #define SIZE 50000000
 #define NUM_QUERIES 2
@@ -21,6 +19,7 @@ void clear_cache() {
   sync();
   ofstream ofs("/proc/sys/vm/drop_caches");
   ofs << "3" << endl;
+  sync();
 }
 
 struct Node {
