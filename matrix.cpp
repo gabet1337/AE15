@@ -63,9 +63,18 @@ void preprocess_matrix_col_layout(matrix &mat, vector<int> &res) {
       res[(i*rows)+j] = mat[j][i];
 }
 
-void mult_row_layout(int a_num_rows, int a_num_cols, vector<int> &a, int b_num_rows, int b_num_cols, vector<int> &b) {
+void mult_row_layout(matrix &A, matrix &B, vector<int> &res) {
 
-  vector<int> res;
+  vi a, b;
+
+  preprocess_matrix_row_layout(A,a);
+  preprocess_matrix_col_layout(B,b);
+
+  int a_num_rows = matrix_size(A).first;
+  int a_num_cols = matrix_size(A).second;
+  int b_num_rows = matrix_size(B).first;
+  int b_num_cols = matrix_size(B).second;
+  
   res.resize(a_num_rows*b_num_cols,0);
 
   for (int k=0; k<b_num_cols;k++) {
@@ -76,14 +85,20 @@ void mult_row_layout(int a_num_rows, int a_num_cols, vector<int> &a, int b_num_r
     }
   }
 
-  cout << "\nResult:\n";
-  print_array_as_matrix(res,a_num_rows,b_num_cols);
-  
 }
 
-void mult_col_layout(int a_num_rows, int a_num_cols, vector<int> &a, int b_num_rows, int b_num_cols, vector<int> &b) {
+void mult_col_layout(matrix &A, matrix &B, vector<int> &res) {
 
-  vector<int> res;
+  vi a, b;
+  
+  preprocess_matrix_col_layout(A,a);
+  preprocess_matrix_row_layout(B,b);
+
+  int a_num_rows = matrix_size(A).first;
+  int a_num_cols = matrix_size(A).second;
+  //int b_num_rows = matrix_size(B).first;
+  int b_num_cols = matrix_size(B).second;
+  
   res.resize(a_num_rows*b_num_cols,0);
 
   for (int k=0; k<b_num_cols;k++) {
@@ -94,12 +109,41 @@ void mult_col_layout(int a_num_rows, int a_num_cols, vector<int> &a, int b_num_r
     }
   }
 
-  cout << "\nResult:\n";
-  print_array_as_matrix(res,a_num_rows,b_num_cols);
-  
 }
 
-void test_row_mult() {
+void mult_naive_layout(matrix &A, matrix &B, vector<int> &res) {
+  
+  vi a, b;
+
+  preprocess_matrix_row_layout(A,a);
+  preprocess_matrix_row_layout(B,b); 
+
+  int a_num_rows = matrix_size(A).first;
+  int a_num_cols = matrix_size(A).second;
+  //int b_num_rows = matrix_size(B).first;
+  int b_num_cols = matrix_size(B).second;
+
+  res.resize(a_num_rows*b_num_cols,0);
+
+  for (int k=0; k<b_num_cols;k++) {
+    for (int j=0; j<a_num_rows;j++) {
+      for (int i=0; i<a_num_cols;i++) {
+	res[(k*a_num_rows)+j] = res[(k*a_num_rows)+j] + (a[(j*a_num_cols)+i] * b[(i*b_num_cols)+k]);
+      }
+    }
+  }
+
+}
+
+int array_sum(vector<int> &a) {
+  int res = 0;
+  for (size_t i=0; i<a.size(); i++)
+    res += a[i];
+
+  return res;
+}
+
+int main() {
 
   matrix A, B;
 
@@ -113,72 +157,23 @@ void test_row_mult() {
   for (int i=0; i<matrix_size(B).first; i++)
     for (int j=0; j<matrix_size(B).second; j++)
       B[i][j] = (i*matrix_size(B).second)+j+1;
+
+  vector<int> res_naive;
+  vector<int> res_col;
+  vector<int> res_row;
   
-  vi a, b;
-  
-  preprocess_matrix_row_layout(A,a);
-  preprocess_matrix_col_layout(B,b);
+  mult_naive_layout(A, B, res_naive);
+  mult_col_layout(A, B, res_col);
+  mult_row_layout(A, B, res_row);
 
-  cout << "Matrix A:\n";
-  print_matrix(A);
- 
-  cout << "\nMatrix A (row layout)\n";
-  print_array(a);
+  cout << "naive_mult (sum):\t" << array_sum(res_naive) << "\n";
+  //print_array_as_matrix(res_naive, matrix_size(A).first, matrix_size(B).second);
 
-  cout << "\n\nMatrix B:\n";
-  print_matrix(B);
+  cout << "column_mult (sum):\t" << array_sum(res_col) << "\n";
+  //print_array_as_matrix(res_col, matrix_size(A).first, matrix_size(B).second);
 
-  cout << "\nMatrix B (row layout)\n";
-  print_array(b);
-  
-  cout << "\n";
-
-  mult_row_layout(matrix_size(A).first,matrix_size(A).second,a,matrix_size(B).first,matrix_size(B).second,b);
-  
-}
-
-void test_col_mult() {
-
-matrix A, B;
-
-  resize_matrix(A,5,8);
-  resize_matrix(B,8,3);
-
-  for (int i=0; i<matrix_size(A).first; i++)
-    for (int j=0; j<matrix_size(A).second; j++)
-      A[i][j] = (i*matrix_size(A).second)+j+1;
-
-  for (int i=0; i<matrix_size(B).first; i++)
-    for (int j=0; j<matrix_size(B).second; j++)
-      B[i][j] = (i*matrix_size(B).second)+j+1;
-  
-  vi a, b;
-  
-  preprocess_matrix_col_layout(A,a);
-  preprocess_matrix_row_layout(B,b);
-
-  cout << "Matrix A:\n";
-  print_matrix(A);
- 
-  cout << "\nMatrix A (col layout)\n";
-  print_array(a);
-
-  cout << "\n\nMatrix B:\n";
-  print_matrix(B);
-
-  cout << "\nMatrix B (col layout)\n";
-  print_array(b);
-  
-  cout << "\n";
-
-  mult_col_layout(matrix_size(A).first,matrix_size(A).second,a,matrix_size(B).first,matrix_size(B).second,b);
-  
-}
-
-int main() {
-
-  //test_row_mult();
-  test_col_mult();
+  cout << "row_mult (sum):\t\t" << array_sum(res_row) << "\n";
+  //print_array_as_matrix(res_row, matrix_size(A).first, matrix_size(B).second);
   
   return 0;
 };
