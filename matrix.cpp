@@ -3,6 +3,7 @@
 #include <ctime>
 #include <vector>
 #include <stdio.h>
+#include <algorithm>
 
 using namespace std;
 
@@ -164,12 +165,48 @@ int array_sum(vector<int> &a) {
   return res;
 }
 
+void mult2_rec(matrix A, matrix B, matrix C) {
+
+  
+  
+}
+
+void mult_rec(matrix &A, matrix &B, matrix &C, int m_start, int m, int n_start, int n, int p_start,  int p) {
+  
+  // Invariant: A is mxn, B is nxp, C is mxp
+
+  cout << m_start << " " << m << " " << n_start << " " << n << " " << p_start << " " << p << endl;
+  
+  if ((m == m_start) && (n == n_start) && (p == p_start)) {
+    C[m][p] = C[m][p] + (A[m][n] * B[n][p]);
+    return;
+  }
+
+  if (m - m_start >= max(n - n_start, p - p_start)) {
+    cout << "a" << endl;
+    int m_mid = m/2; // split m
+    mult_rec(A, B, C, m_start, m_mid, n_start, n, p_start, p);
+    mult_rec(A, B, C, m_mid+1, m, n_start, n, p_start, p);
+  } else if (n - n_start  >= max(m - m_start, p - p_start)) {
+    cout << "b" << endl;
+    int n_mid = n/2; // split n
+    mult_rec(A, B, C, m_start, m, n_start, n_mid, p_start, p);
+    mult_rec(A, B, C, m_start, m, n_mid+1, n, p_start, p);
+  } else if (p - p_start >= max(m - m_start, n - n_start)) {
+    cout << "b" << endl;
+    int p_mid = p/2; //split p
+    mult_rec(A, B, C, m_start, m, n_start, n, p_start, p_mid);
+    mult_rec(A, B, C, m_start, m, n_start, n, p_mid+1, p);
+  }
+ 
+}
+      
 int main() {
 
   matrix A, B;
 
-  resize_matrix(A,624*2,624*2);
-  resize_matrix(B,624*2,624*2);
+  resize_matrix(A,4,4);
+  resize_matrix(B,4,4);
 
   for (int i=0; i<matrix_size(A).first; i++)
     for (int j=0; j<matrix_size(A).second; j++)
@@ -179,23 +216,28 @@ int main() {
     for (int j=0; j<matrix_size(B).second; j++)
       B[i][j] = (i*matrix_size(B).second)+j+1;
 
-  vector<int> res_naive;
-  vector<int> res_col;
-  vector<int> res_row;
+  // vector<int> res_naive;
+  // vector<int> res_col;
+  // vector<int> res_row;
 
-  double row_time;
-  double col_time;
-  double naive_time;
+  // //double row_time;
+  // double col_time;
+  // double naive_time;
   
-  mult_naive_layout(A, B, res_naive, naive_time); 
-  cout << "naive_mult\t" << "time: " << naive_time/1000  << "\t" << "sum:\t" << array_sum(res_naive) << "\n";
+  //mult_naive_layout(A, B, res_naive, naive_time); 
+  //cout << "naive_mult\t" << "time: " << naive_time/1000  << "\t" << "sum:\t" << array_sum(res_naive) << "\n";
 
-  mult_col_layout(A, B, res_col, col_time);
-  cout << "col_mult\t" << "time: " << col_time/1000  << "\t" << "sum:\t" << array_sum(res_col) << "\n";
+  //mult_col_layout(A, B, res_col, col_time);
+  //cout << "col_mult\t" << "time: " << col_time/1000  << "\t" << "sum:\t" << array_sum(res_col) << "\n";
 
-  mult_row_layout(A, B, res_row, row_time);
-  cout << "row_mult\t" << "time: " << row_time/1000  << "\t" << "sum:\t" << array_sum(res_row) << "\n";
+  //mult_row_layout(A, B, res_row, row_time);
+  //cout << "row_mult\t" << "time: " << row_time/1000  << "\t" << "sum:\t" << array_sum(res_row) << "\n";
 
+  matrix C;
+  resize_matrix(C,4,4);
+  
+  mult_rec(A, B, C, 0, 3, 0, 3, 0, 3);
+  
   //print_array_as_matrix(res_row, matrix_size(A).first, matrix_size(B).second);
   
   return 0;
