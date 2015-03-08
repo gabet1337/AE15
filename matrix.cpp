@@ -3,6 +3,7 @@
 #include <ctime>
 #include <vector>
 #include <stdio.h>
+#include <algorithm>
 
 using namespace std;
 
@@ -63,11 +64,24 @@ void preprocess_matrix_col_layout(matrix &mat, vector<int> &res) {
       res[(i*rows)+j] = mat[j][i];
 }
 
-void mult_row_layout(int a_num_rows, int a_num_cols, vector<int> &a, int b_num_rows, int b_num_cols, vector<int> &b) {
+void mult_row_layout(matrix &A, matrix &B, vector<int> &res, double &time) {
 
-  vector<int> res;
+  clock_t start,end;
+  
+  vi a, b;
+
+  preprocess_matrix_row_layout(A,a);
+  preprocess_matrix_col_layout(B,b);
+
+  int a_num_rows = matrix_size(A).first;
+  int a_num_cols = matrix_size(A).second;
+  int b_num_rows = matrix_size(B).first;
+  int b_num_cols = matrix_size(B).second;
+  
   res.resize(a_num_rows*b_num_cols,0);
 
+  start = clock();
+  
   for (int k=0; k<b_num_cols;k++) {
     for (int j=0; j<a_num_rows;j++) {
       for (int i=0; i<a_num_cols;i++) {
@@ -76,17 +90,123 @@ void mult_row_layout(int a_num_rows, int a_num_cols, vector<int> &a, int b_num_r
     }
   }
 
-  cout << "\nResult:\n";
-  print_array_as_matrix(res,a_num_rows,b_num_cols);
+  end = clock();
+  time = (end - start) / (double)(CLOCKS_PER_SEC / 1000);
   
 }
 
-void test_row_mult() {
+void mult_col_layout(matrix &A, matrix &B, vector<int> &res, double &time) {
+
+  clock_t start,end;
+  
+  vi a, b;
+  
+  preprocess_matrix_col_layout(A,a);
+  preprocess_matrix_row_layout(B,b);
+
+  int a_num_rows = matrix_size(A).first;
+  int a_num_cols = matrix_size(A).second;
+  //int b_num_rows = matrix_size(B).first;
+  int b_num_cols = matrix_size(B).second;
+  
+  res.resize(a_num_rows*b_num_cols,0);
+
+  start = clock();
+  
+  for (int k=0; k<b_num_cols;k++) {
+    for (int j=0; j<a_num_rows;j++) {
+      for (int i=0; i<a_num_cols;i++) {
+	res[(k*a_num_rows)+j] = res[(k*a_num_rows)+j] + (a[(i*a_num_rows)+j] * b[(i*b_num_cols)+k]);
+      }
+    }
+  }
+
+  end = clock();
+  time = (end - start) / (double)(CLOCKS_PER_SEC / 1000);
+
+}
+
+void mult_naive_layout(matrix &A, matrix &B, vector<int> &res, double &time) {
+
+  clock_t start,end;
+  
+  vi a, b;
+
+  preprocess_matrix_row_layout(A,a);
+  preprocess_matrix_row_layout(B,b); 
+
+  int a_num_rows = matrix_size(A).first;
+  int a_num_cols = matrix_size(A).second;
+  //int b_num_rows = matrix_size(B).first;
+  int b_num_cols = matrix_size(B).second;
+
+  res.resize(a_num_rows*b_num_cols,0);
+
+  start = clock();
+  
+  for (int k=0; k<b_num_cols;k++) {
+    for (int j=0; j<a_num_rows;j++) {
+      for (int i=0; i<a_num_cols;i++) {
+	res[(k*a_num_rows)+j] = res[(k*a_num_rows)+j] + (a[(j*a_num_cols)+i] * b[(i*b_num_cols)+k]);
+      }
+    }
+  }
+
+  end = clock();
+  time = (end - start) / (double)(CLOCKS_PER_SEC / 1000);
+
+}
+
+int array_sum(vector<int> &a) {
+  int res = 0;
+  for (size_t i=0; i<a.size(); i++)
+    res += a[i];
+
+  return res;
+}
+
+void mult2_rec(matrix A, matrix B, matrix C) {
+
+  
+  
+}
+
+void mult_rec(matrix &A, matrix &B, matrix &C, int m_start, int m, int n_start, int n, int p_start,  int p) {
+  
+  // Invariant: A is mxn, B is nxp, C is mxp
+
+  cout << m_start << " " << m << " " << n_start << " " << n << " " << p_start << " " << p << endl;
+  
+  if ((m == m_start) && (n == n_start) && (p == p_start)) {
+    C[m][p] = C[m][p] + (A[m][n] * B[n][p]);
+    return;
+  }
+
+  if (m - m_start >= max(n - n_start, p - p_start)) {
+    cout << "a" << endl;
+    int m_mid = m/2; // split m
+    mult_rec(A, B, C, m_start, m_mid, n_start, n, p_start, p);
+    mult_rec(A, B, C, m_mid+1, m, n_start, n, p_start, p);
+  } else if (n - n_start  >= max(m - m_start, p - p_start)) {
+    cout << "b" << endl;
+    int n_mid = n/2; // split n
+    mult_rec(A, B, C, m_start, m, n_start, n_mid, p_start, p);
+    mult_rec(A, B, C, m_start, m, n_mid+1, n, p_start, p);
+  } else if (p - p_start >= max(m - m_start, n - n_start)) {
+    cout << "b" << endl;
+    int p_mid = p/2; //split p
+    mult_rec(A, B, C, m_start, m, n_start, n, p_start, p_mid);
+    mult_rec(A, B, C, m_start, m, n_start, n, p_mid+1, p);
+  }
+ 
+}
+      
+int main() {
 
   matrix A, B;
 
-  resize_matrix(A,5,8);
-  resize_matrix(B,8,3);
+  resize_matrix(A,4,4);
+  resize_matrix(B,4,4);
 
   for (int i=0; i<matrix_size(A).first; i++)
     for (int j=0; j<matrix_size(A).second; j++)
@@ -95,33 +215,30 @@ void test_row_mult() {
   for (int i=0; i<matrix_size(B).first; i++)
     for (int j=0; j<matrix_size(B).second; j++)
       B[i][j] = (i*matrix_size(B).second)+j+1;
+
+  // vector<int> res_naive;
+  // vector<int> res_col;
+  // vector<int> res_row;
+
+  // //double row_time;
+  // double col_time;
+  // double naive_time;
   
-  vi a, b;
+  //mult_naive_layout(A, B, res_naive, naive_time); 
+  //cout << "naive_mult\t" << "time: " << naive_time/1000  << "\t" << "sum:\t" << array_sum(res_naive) << "\n";
+
+  //mult_col_layout(A, B, res_col, col_time);
+  //cout << "col_mult\t" << "time: " << col_time/1000  << "\t" << "sum:\t" << array_sum(res_col) << "\n";
+
+  //mult_row_layout(A, B, res_row, row_time);
+  //cout << "row_mult\t" << "time: " << row_time/1000  << "\t" << "sum:\t" << array_sum(res_row) << "\n";
+
+  matrix C;
+  resize_matrix(C,4,4);
   
-  preprocess_matrix_row_layout(A,a);
-  preprocess_matrix_col_layout(B,b);
-
-  cout << "Matrix A:\n";
-  print_matrix(A);
- 
-  cout << "\nMatrix A (row layout)\n";
-  print_array(a);
-
-  cout << "\n\nMatrix B:\n";
-  print_matrix(B);
-
-  cout << "\nMatrix B (row layout)\n";
-  print_array(b);
+  mult_rec(A, B, C, 0, 3, 0, 3, 0, 3);
   
-  cout << "\n";
-
-  mult_row_layout(matrix_size(A).first,matrix_size(A).second,a,matrix_size(B).first,matrix_size(B).second,b);
-  
-}
-
-int main() {
-
-  test_row_mult();
+  //print_array_as_matrix(res_row, matrix_size(A).first, matrix_size(B).second);
   
   return 0;
 };
