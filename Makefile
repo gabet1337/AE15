@@ -1,5 +1,5 @@
 CXX=g++
-CXXFLAGS=-O3 -Wall
+CXXFLAGS=-Wall -O2
 .PHONY: pred
 pred:
 	rm -f pred
@@ -22,3 +22,4 @@ clean:
 	rm -f small
 	rm -f pred
 	rm -f hw
+	$(CXX) -03 matrix.cpp /usr/lib/x86_64-linux-gnu/libpapi.so -i matrix
