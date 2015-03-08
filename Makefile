@@ -22,4 +22,3 @@ clean:
 	rm -f small
 	rm -f pred
 	rm -f hw
-	$(CXX) -03 matrix.cpp /usr/lib/x86_64-linux-gnu/libpapi.so -i matrix
