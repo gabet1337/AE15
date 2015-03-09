@@ -171,32 +171,71 @@ void mult2_rec(matrix A, matrix B, matrix C) {
   
 }
 
-void mult_rec(matrix &A, matrix &B, matrix &C, int m_start, int m, int n_start, int n, int p_start,  int p) {
-  
-  // Invariant: A is mxn, B is nxp, C is mxp
+void mult_naive_layout(matrix &A, int A_row_idx, int A_rows, int A_col_idx, int A_cols, matrix &B, int B_row_idx, int B_rows, int B_col_idx, int B_cols, matrix &C) {
 
-  cout << m_start << " " << m << " " << n_start << " " << n << " " << p_start << " " << p << endl;
+  //clock_t start,end;
   
-  if ((m == m_start) && (n == n_start) && (p == p_start)) {
-    C[m][p] = C[m][p] + (A[m][n] * B[n][p]);
-    return;
+  //vi a, b;
+
+  //preprocess_matrix_row_layout(A,a);
+  //preprocess_matrix_row_layout(B,b); 
+
+  int a_num_rows = A_rows; // matrix_size(A).first;
+  int a_num_cols = A_cols; // matrix_size(A).second;
+  //int b_num_rows = matrix_size(B).first;
+  int b_num_cols = B_cols; //matrix_size(B).second;
+
+  //res.resize(a_num_rows*b_num_cols,0);
+
+  //start = clock();
+  
+  for (int k=0; k<b_num_cols;k++) {
+    for (int j=0; j<a_num_rows;j++) {
+      for (int i=0; i<a_num_cols;i++) {
+		C[k+B_col_idx][j+A_row_idx] = C[k+B_col_idx][j+A_row_idx] + (A[j+A_row_idx][i+A_col_idx] * B[i+B_row_idx][k+B_col_idx]);
+      }
+    }
   }
 
-  if (m - m_start >= max(n - n_start, p - p_start)) {
+  //end = clock();
+  //time = (end - start) / (double)(CLOCKS_PER_SEC / 1000);
+
+}
+
+void mult_rec(matrix &A, matrix &B, matrix &C, int m_start, int m_end, int n_start, int n_end, int p_start,  int p_end) {
+  
+  // Invariant: A is mxn, B is nxp, C is mxp
+  // M[row][column]
+
+  int m = m_end - m_start + 1;
+  int n = n_end - n_start + 1;
+  int p = p_end - p_start + 1;
+   
+  if ((m == 1) && (n == 1) && (p == 1)) {
+    C[m_start-1][p_start-1] = C[m_start-1][p_start-1] + (A[m_start-1][n_start-1] * B[n_start-1][p_start-1]);
+  } else if (m >= max(n, p)) {
     cout << "a" << endl;
     int m_mid = m/2; // split m
-    mult_rec(A, B, C, m_start, m_mid, n_start, n, p_start, p);
-    mult_rec(A, B, C, m_mid+1, m, n_start, n, p_start, p);
-  } else if (n - n_start  >= max(m - m_start, p - p_start)) {
+    
+	//mult_naive_layout(matrix &A, int A_row_idx, int A_rows, int A_col_idx, int A_cols, matrix &B, int B_row_idx, int B_rows, int B_col_idx, int B_cols, matrix &C)
+
+	mult_rec(A, B, C, m_start, m_end-m_mid, n_start, n_end, p_start, p_end);
+	mult_naive_layout(A, m_start, m_end-m_mid+1, n_start, n, B, n_start, n, p_start, p, C);
+
+	mult_rec(A, B, C,m_end-m_mid+1, m_end, n_start, n_end, p_start, p_end);
+
+
+
+  } else if (n >= max(m, p)) {
     cout << "b" << endl;
     int n_mid = n/2; // split n
-    mult_rec(A, B, C, m_start, m, n_start, n_mid, p_start, p);
-    mult_rec(A, B, C, m_start, m, n_mid+1, n, p_start, p);
-  } else if (p - p_start >= max(m - m_start, n - n_start)) {
+    mult_rec(A, B, C, m_start, m_end, n_start, n_end-n_mid, p_start, p_end);
+    mult_rec(A, B, C, m_start, m_end, n_end-n_mid+1, n_end, p_start, p_end);
+  } else if (p >= max(m, n)) {
     cout << "b" << endl;
     int p_mid = p/2; //split p
-    mult_rec(A, B, C, m_start, m, n_start, n, p_start, p_mid);
-    mult_rec(A, B, C, m_start, m, n_start, n, p_mid+1, p);
+    mult_rec(A, B, C, m_start, m_end, n_start, n_end, p_start, p_end-p_mid);
+    mult_rec(A, B, C, m_start, m_end, n_start, n_end, p_end-p_mid+1, p_end);
   }
  
 }
@@ -236,7 +275,7 @@ int main() {
   matrix C;
   resize_matrix(C,4,4);
   
-  mult_rec(A, B, C, 0, 3, 0, 3, 0, 3);
+  mult_rec(A, B, C, 1, 4, 1, 4, 4, 4);
   
   //print_array_as_matrix(res_row, matrix_size(A).first, matrix_size(B).second);
   
