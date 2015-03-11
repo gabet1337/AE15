@@ -18,7 +18,7 @@ count:	clean
 	$(CXX) $(CXXFLAGS) counting_sort.cpp -o count
 
 radix:	clean
-	$(CXX) $(CXXFLAGS) radix_sort.cpp -o radix
+	$(CXX) -fopenmp -Wall -std=c++11 radix_sort.cpp -o radix
 
 matrix: clean
 	rm -f matrix

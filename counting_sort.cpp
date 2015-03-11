@@ -74,9 +74,9 @@ void test_article_counting_sort() {
 }
 
 
-int main() {
-  srand(time(NULL));
-  test_clrs_counting_sort();
-  test_article_counting_sort();
-  return 0;
-}
+// int main() {
+//   srand(time(NULL));
+//   test_clrs_counting_sort();
+//   test_article_counting_sort();
+//   return 0;
+// }
