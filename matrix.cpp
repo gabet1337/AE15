@@ -4,6 +4,8 @@
 #include <vector>
 #include <stdio.h>
 #include <algorithm>
+#include <papi.h>
+#include <fstream>
 
 using namespace std;
 
@@ -64,7 +66,7 @@ void preprocess_matrix_col_layout(matrix &mat, vector<int> &res) {
       res[(i*rows)+j] = mat[j][i];
 }
 
-void mult_row_layout(matrix &A, matrix &B, vector<int> &res, double &time) {
+void mult_row_layout(matrix &A, matrix &B, vector<int> &res, double &time, int events[], int event_size, long long &count0, long long &count1) {
   
   clock_t start,end;
   
@@ -79,6 +81,11 @@ void mult_row_layout(matrix &A, matrix &B, vector<int> &res, double &time) {
   int b_num_cols = matrix_size(B).second;
   
   res.resize(a_num_rows*b_num_cols,0);
+
+  PAPI_library_init(PAPI_VER_CURRENT);
+  long long values[event_size];
+
+  PAPI_start_counters(events, event_size);
   
   start = clock();
   
@@ -90,12 +97,17 @@ void mult_row_layout(matrix &A, matrix &B, vector<int> &res, double &time) {
     }
   }
   
+  PAPI_stop_counters(values, event_size);
+
+  count0 = values[0];
+  count1 = values[1];
+  
   end = clock();
   time = (end - start) / (double)(CLOCKS_PER_SEC / 1000);
   
 }
 
-void mult_col_layout(matrix &A, matrix &B, vector<int> &res, double &time) {
+void mult_col_layout(matrix &A, matrix &B, vector<int> &res, double &time, int events[], int event_size, long long &count0, long long &count1) {
   
   clock_t start,end;
   
@@ -106,11 +118,15 @@ void mult_col_layout(matrix &A, matrix &B, vector<int> &res, double &time) {
   
   int a_num_rows = matrix_size(A).first;
   int a_num_cols = matrix_size(A).second;
-  //int b_num_rows = matrix_size(B).first;
   int b_num_cols = matrix_size(B).second;
   
   res.resize(a_num_rows*b_num_cols,0);
-  
+
+  PAPI_library_init(PAPI_VER_CURRENT);
+  long long values[event_size];
+
+  PAPI_start_counters(events, event_size);
+
   start = clock();
   
   for (int k=0; k<b_num_cols;k++) {
@@ -120,13 +136,18 @@ void mult_col_layout(matrix &A, matrix &B, vector<int> &res, double &time) {
       }
     }
   }
-  
+
+  PAPI_stop_counters(values, event_size);
+
+  count0 = values[0];
+  count1 = values[1];
+   
   end = clock();
   time = (end - start) / (double)(CLOCKS_PER_SEC / 1000);
   
 }
 
-void mult_naive_layout(matrix &A, matrix &B, vector<int> &res, double &time) {
+void mult_naive_layout(matrix &A, matrix &B, vector<int> &res, double &time, int events[], int event_size, long long &count0, long long &count1) {
 
   clock_t start,end;
   
@@ -137,13 +158,17 @@ void mult_naive_layout(matrix &A, matrix &B, vector<int> &res, double &time) {
   
   int a_num_rows = matrix_size(A).first;
   int a_num_cols = matrix_size(A).second;
-  //int b_num_rows = matrix_size(B).first;
   int b_num_cols = matrix_size(B).second;
   
   res.resize(a_num_rows*b_num_cols,0);
+
+  PAPI_library_init(PAPI_VER_CURRENT);
+  long long values[event_size];
+
+  PAPI_start_counters(events, event_size);
   
   start = clock();
-  
+
   for (int k=0; k<b_num_cols;k++) {
     for (int j=0; j<a_num_rows;j++) {
       for (int i=0; i<a_num_cols;i++) {
@@ -153,6 +178,12 @@ void mult_naive_layout(matrix &A, matrix &B, vector<int> &res, double &time) {
   }
 
   end = clock();
+
+  PAPI_stop_counters(values, event_size);
+
+  count0 = values[0];
+  count1 = values[1];
+
   time = (end - start) / (double)(CLOCKS_PER_SEC / 1000);
 
 }
@@ -188,8 +219,8 @@ void mult_naive_layout(matrix &A, int A_row_idx, int A_rows, int A_col_idx, int 
   
 }
 
-int array_sum(vector<int> &a) {
-  int res = 0;
+long long array_sum(vector<int> &a) {
+  long long res = 0;
   for (size_t i=0; i<a.size(); i++)
     res += a[i];
   
@@ -382,6 +413,103 @@ matrix ver_split_matrix(matrix &M, int start, int end) {
   
 }
 
+#define MAX_NUM 10000000
+
+void print_to_plot(vector<pair<int,double> > &data, char* fname) {
+  ofstream myfile;
+  myfile.open(fname);
+  cout << "#x\ty" << endl;
+  myfile << "#x\ty" << endl;
+  for (size_t i = 0; i < data.size(); i++) {
+    myfile << data[i].first << "\t" << data[i].second << endl;
+    cout << data[i].first << "\t" << data[i].second << endl;
+  }
+  myfile.close();
+}
+
+vector<pair<int, double > > naive_res, col_res, row_res;
+
+void test_running_time(int size) {
+
+  matrix A, B;
+  
+  resize_matrix(A, size, size);
+  resize_matrix(B, size, size);
+
+  srand (time(NULL));
+  
+  for (int i=0; i<matrix_size(A).first; i++)
+    for (int j=0; j<matrix_size(A).second; j++) {
+      int r = rand() % MAX_NUM;
+      A[i][j] = r; // (i*matrix_size(A).second)+j+1;
+    }
+
+  for (int i=0; i<matrix_size(B).first; i++)
+    for (int j=0; j<matrix_size(B).second; j++) {
+      int r = rand() % MAX_NUM;
+      B[i][j] = r; // (i*matrix_size(B).second)+j+1;
+    }
+
+  vector<int> res_naive;
+  vector<int> res_col;
+  vector<int> res_row;
+
+  double row_time;
+  double col_time;
+  double naive_time;
+
+  //vector<long long> row_papi_res;
+  //vector<long long> col_papi_res;
+  //vector<long long> naive_papi_res;
+
+  long long naive_count0 = 0;
+  long long naive_count1 = 0;
+
+  long long col_count0 = 0;
+  long long col_count1 = 0;
+
+  long long row_count0 = 0;
+  long long row_count1 = 0;
+  
+  int events[2] = {PAPI_L2_TCA, PAPI_L2_TCM};
+  int event_size = 2;
+  
+  cout << size << "x" << size << " ----------------------------------------------------" << endl;
+
+  mult_row_layout(A, B, res_row, row_time, events, event_size, row_count0, row_count1);
+  cout << "row_mult\t" << "time: " << row_time/1000  << "\t";
+  cout << "tca: " << row_count0 << "\ttcm: " << row_count1 << "\t";
+  cout << "miss ratio: " << (double) row_count1 / (double) row_count0 << "\t";
+  cout << "Cache access / sec: " << (double) row_count0 / row_time << "\t";
+  cout << "Cache misses / sec: " << (double) row_count1 / row_time << "\t";
+  cout << "sum: " << array_sum(res_row) << "\n";
+
+  mult_naive_layout(A, B, res_naive, naive_time, events, event_size, naive_count0, naive_count1); 
+  cout << "naive_mult\t" << "time: " << naive_time/1000  << "\t";
+  cout << "tca: " << naive_count0 << "\ttcm: " << naive_count1 << "\t";
+  cout << "miss ratio: " << (double) naive_count1 / (double) naive_count0 << "\t";
+  cout << "Cache access / sec: " << (double) naive_count0 /  naive_time << "\t";
+  cout << "Cache misses / sec: " << (double) naive_count1 /  naive_time << "\t";
+  cout << "sum: " << array_sum(res_naive) << endl;
+
+  mult_col_layout(A, B, res_col, col_time, events, event_size, col_count0, col_count1);
+  cout << "col_mult\t" << "time: " << col_time/1000  << "\t";
+  cout << "tca: " << col_count0 << "\ttcm: " << col_count1 << "\t";
+  cout << "miss ratio: " << (double) col_count1 / (double) col_count0 << "\t";
+  cout << "Cache access / sec: " << (double) col_count0 / col_time << "\t";
+  cout << "Cache misses / sec: " << (double) col_count1 / col_time << "\t";
+  cout << "sum: " << array_sum(res_col) << endl;
+
+  naive_res.push_back(make_pair(size, (double) row_count1 / row_time));
+  col_res.push_back(make_pair(size, (double) col_count1 / row_time));
+  row_res.push_back(make_pair(size, (double) row_count1 / row_time));
+  
+  print_to_plot(naive_res, "Naive.dat");
+  print_to_plot(col_res, "Col.dat");
+  print_to_plot(row_res, "Row.dat");
+  
+}
+
 matrix mult_rec2(matrix &A, matrix &B, matrix C, int m_start, int m_end, int n_start, int n_end, int p_start,  int p_end) {
   
   // A_mxn, B_nxp, C_mxp
@@ -389,12 +517,12 @@ matrix mult_rec2(matrix &A, matrix &B, matrix C, int m_start, int m_end, int n_s
   int m = m_end - m_start + 1;
   int n = n_end - n_start + 1;
   int p = p_end - p_start + 1;
-   
+  
   if ((m == 1) && (n == 1) && (p == 1)) {
-    matrix res;
-    resize_matrix(res,1,1);
-    res[0][0] = (A[m_start-1][n_start-1] * B[n_start-1][p_start-1]);
-    return res;
+    //matrix res;
+    //resize_matrix(res,1,1);
+    C[0][0] = C[0][0] + (A[m_start-1][n_start-1] * B[n_start-1][p_start-1]);
+    return C;
   } else if (m >= max(n, p)) {
     
     int m_mid = m/2; // split m
@@ -414,10 +542,12 @@ matrix mult_rec2(matrix &A, matrix &B, matrix C, int m_start, int m_end, int n_s
     
     int n_mid = n/2; // split n
     
-    C = sum_matrix(C, mult_rec2(A, B, C, m_start, m_end, n_start, n_end-n_mid, p_start, p_end));
-    C = sum_matrix(C, mult_rec2(A, B, C, m_start, m_end, n_end-n_mid+1, n_end, p_start, p_end));
     
-    return C;
+    //C = sum_matrix(C, mult_rec2(A, B, C, m_start, m_end, n_start, n_mid, p_start, p_end));
+    //C = sum_matrix(C, mult_rec2(A, B, C, m_start, m_end, n_mid+1, n_end, p_start, p_end));
+    
+    //return C;
+    return sum_matrix(mult_rec2(A, B, C, m_start, m_end, n_start, n_end-n_mid, p_start, p_end), mult_rec2(A, B, C, m_start, m_end, n_end-n_mid+1, n_end, p_start, p_end));
     
   } else if (p >= max(m, n)) {
     
@@ -427,7 +557,7 @@ matrix mult_rec2(matrix &A, matrix &B, matrix C, int m_start, int m_end, int n_s
     matrix ab1 = mult_rec2(A, B, C1, m_start, m_end, n_start, n_end, p_start, p_end-p_mid);
     
     matrix C2 = ver_split_matrix(C, p_mid, p-1);
-    matrix ab2 = mult_rec2(A, B, C2, m_start, m_end, n_start, n_end, p_end-p_mid+1, p_end);
+    matrix ab2 = mult_rec2(A, B, C1, m_start, m_end, n_start, n_end, p_end-p_mid+1, p_end);
     
     C1 = sum_matrix(C1, ab1);
     C2 = sum_matrix(C2, ab2);
@@ -442,8 +572,9 @@ int main() {
   
   matrix A, B, C;
   
-  resize_matrix(A,4,4);
-  resize_matrix(B,4,4);
+  resize_matrix(A,4,5);
+  resize_matrix(B,5,4);
+  resize_matrix(C,4,4);
 
   for (int i=0; i<matrix_size(A).first; i++)
     for (int j=0; j<matrix_size(A).second; j++)
@@ -453,29 +584,38 @@ int main() {
     for (int j=0; j<matrix_size(B).second; j++)
       B[i][j] = (i*matrix_size(B).second)+j+1;
 
-  // vector<int> res_naive;
-  // vector<int> res_col;
-  // vector<int> res_row;
+  /*
+  vector<int> res_naive;
+  vector<int> res_col;
+  vector<int> res_row;
 
-  // //double row_time;
-  // double col_time;
-  // double naive_time;
-  
-  //mult_naive_layout(A, B, res_naive, naive_time); 
+  double row_time;
+  double col_time;
+  double naive_time;
+
+  long long row_papi_res;
+  long long col_papi_res;
+  long long naive_papi_res;
+  */
+  //mult_naive_layout(A, B, res_naive, naive_time, naive_papi_res); 
   //cout << "naive_mult\t" << "time: " << naive_time/1000  << "\t" << "sum:\t" << array_sum(res_naive) << "\n";
 
-  //mult_col_layout(A, B, res_col, col_time);
+  //mult_col_layout(A, B, res_col, col_time, col_papi_res);
   //cout << "col_mult\t" << "time: " << col_time/1000  << "\t" << "sum:\t" << array_sum(res_col) << "\n";
 
-  //mult_row_layout(A, B, res_row, row_time);
-  //cout << "row_mult\t" << "time: " << row_time/1000  << "\t" << "sum:\t" << array_sum(res_row) << "\n";
+  //mult_row_layout(A, B, res_row, row_time, row_papi_res);
 
   //matrix C;
-  resize_matrix(C,4,4);
-  
-  matrix res = mult_rec2(A, B, C, 1, 4, 1, 4, 1, 4);
+
+  //print_matrix(A);
+  matrix res = mult_rec2(A, B, C, 1, matrix_size(A).first, 1, matrix_size(B).first, 1, matrix_size(B).second);
   
   print_matrix(res);
+  //resize_matrix(C,4,4);
+
+  //matrix res = mult_rec2(A, B, C, 1, 4, 1, 4, 1, 4);
+  
+  //print_matrix(res);
 
  /* cout << "Matrix A:" << endl;
   print_matrix(A);
