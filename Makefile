@@ -20,10 +20,6 @@ count:	clean
 radix:	clean
 	$(CXX) -fopenmp -Wall -std=c++11 radix_sort.cpp -o radix
 
-matrix: clean
-	rm -f matrix
-	$(CXX) $(CXXFLAGS) matrix.cpp /usr/lib/x86_64-linux-gnu/libpapi.so -o matrix
-
 clean:
 	rm -f count
 	rm -f pred
