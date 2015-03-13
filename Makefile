@@ -18,7 +18,7 @@ count:	clean
 	$(CXX) $(CXXFLAGS) counting_sort.cpp -o count
 
 radix:	clean
-	$(CXX) -fopenmp -Wall -std=c++11 radix_sort.cpp -o radix
+	$(CXX) -O3 -fopenmp -Wall -std=c++11 radix_sort.cpp /usr/lib/x86_64-linux-gnu/libpapi.so -o radix
 
 clean:
 	rm -f count
