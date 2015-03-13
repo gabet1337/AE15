@@ -71,8 +71,6 @@ pair<vi,pair<vi,vi> > preprocess_mult_row(matrix &A, matrix &B) {
   vi a, b, c;
 
   int a_num_rows = matrix_size(A).first;
-  int a_num_cols = matrix_size(A).second;
-  int b_num_rows = matrix_size(B).first;
   int b_num_cols = matrix_size(B).second;
 
   c.resize(a_num_rows*b_num_cols,0);
@@ -98,7 +96,7 @@ vector<int> mult_row(matrix &A, matrix &B, pair<vi,pair<vi,vi> > &prep_vec) {
   for (int k=0; k<b_num_cols;k++) {
     for (int j=0; j<a_num_rows;j++) {
       for (int i=0; i<a_num_cols;i++) {
-	res[(k*a_num_rows)+j] = res[(k*a_num_rows)+j] + (a[(j*a_num_cols)+i] * b[(k*b_num_rows)+i]);
+	res[(k*a_num_rows)+j] += (a[(j*a_num_cols)+i] * b[(k*b_num_rows)+i]);
       }
     }
   }
@@ -107,33 +105,36 @@ vector<int> mult_row(matrix &A, matrix &B, pair<vi,pair<vi,vi> > &prep_vec) {
   
 }
 
-pair<vi,vi> preprocess_mult_col(matrix &A, matrix &B) {
+pair<vi,pair<vi,vi> > preprocess_mult_col(matrix &A, matrix &B) {
   
-  vi a, b;
+  vi a, b, c;
+
+  int a_num_rows = matrix_size(A).first;
+  int b_num_cols = matrix_size(B).second;
+
+  c.resize(a_num_rows*b_num_cols,0);
+
   preprocess_matrix_col_layout(A,a);
   preprocess_matrix_row_layout(B,b);
 
-  return make_pair(a, b);
+  return make_pair(c, make_pair(a, b));
   
 }
 
-vector<int> mult_col(matrix &A, matrix &B, pair<vi,vi> prep_vec) {
+vector<int> mult_col(matrix &A, matrix &B, pair<vi,pair<vi,vi> > &prep_vec) {
 
   int a_num_rows = matrix_size(A).first;
   int a_num_cols = matrix_size(A).second;
-  int b_num_rows = matrix_size(B).first;
   int b_num_cols = matrix_size(B).second;
 
-  vector<int> res;
-  res.resize(a_num_rows*b_num_cols,0);
-
-  vi a = prep_vec.first;
-  vi b = prep_vec.second;
-
+  vi a = prep_vec.second.first;
+  vi b = prep_vec.second.second;
+  vi res = prep_vec.first;
+  
   for (int k=0; k<b_num_cols;k++) {
     for (int j=0; j<a_num_rows;j++) {
       for (int i=0; i<a_num_cols;i++) {
-	res[(k*a_num_rows)+j] = res[(k*a_num_rows)+j] + (a[(i*a_num_rows)+j] * b[(i*b_num_cols)+k]);
+	res[(k*a_num_rows)+j] += (a[(i*a_num_rows)+j] * b[(i*b_num_cols)+k]);
       }
     }
   }
@@ -142,30 +143,32 @@ vector<int> mult_col(matrix &A, matrix &B, pair<vi,vi> prep_vec) {
   
 }
 
-pair<vi,vi> preprocess_mult_naive(matrix &A, matrix &B) {
+pair<vi,pair<vi,vi> > preprocess_mult_naive(matrix &A, matrix &B) {
   
-  vi a, b;
+  vi a, b, c;
 
+  int a_num_rows = matrix_size(A).first;
+  int b_num_cols = matrix_size(B).second;
+
+  c.resize(a_num_rows*b_num_cols,0);
+  
   preprocess_matrix_row_layout(A,a);
   preprocess_matrix_row_layout(B,b); 
 
-  return make_pair(a, b);
+  return make_pair(c, make_pair(a, b));
   
 }
 
-vector<int> mult_naive(matrix &A, matrix &B, pair<vi,vi> prep_vec) {
+vector<int> mult_naive(matrix &A, matrix &B, pair<vi,pair<vi,vi> > &prep_vec) {
 
   int a_num_rows = matrix_size(A).first;
   int a_num_cols = matrix_size(A).second;
-  int b_num_rows = matrix_size(B).first;
   int b_num_cols = matrix_size(B).second;
 
-  vector<int> res;
-  res.resize(a_num_rows*b_num_cols,0);
-
-  vi a = prep_vec.first;
-  vi b = prep_vec.second;
-
+  vi a = prep_vec.second.first;
+  vi b = prep_vec.second.second;
+  vi res = prep_vec.first;
+  
   for (int k=0; k<b_num_cols;k++) {
     for (int j=0; j<a_num_rows;j++) {
       for (int i=0; i<a_num_cols;i++) {
@@ -324,9 +327,9 @@ matrix mult_rec(matrix &A, matrix &B, matrix C, int m_start, int m_end, int n_st
     C2 = sum_matrix(C2, ab2);
     
     return ver_concat_matrix(C1, C2);
-    
+
   }
-  
+  return C;
 }
 
 pair<double, pair<double,double> > test_mult_rec(matrix &A, matrix &B, int events[], int event_size, int numruns) {
@@ -336,7 +339,7 @@ pair<double, pair<double,double> > test_mult_rec(matrix &A, matrix &B, int event
   
   // Clock, PAPI
   clock_t start,end;
-  double time;
+  double time = 0;
   
   PAPI_library_init(PAPI_VER_CURRENT);
   long long values[event_size];
@@ -379,7 +382,7 @@ pair<double, pair<double,double> > test_row_mult_exclude_preprocess(matrix &A, m
 
   // Clock, PAPI
   clock_t start,end;
-  double time;
+  double time = 0;
   
   PAPI_library_init(PAPI_VER_CURRENT);
   long long values[event_size];
@@ -416,11 +419,11 @@ pair<double, pair<double,double> > test_row_mult_exclude_preprocess(matrix &A, m
 pair<double, pair<double,double> > test_col_mult_exclude_preprocess(matrix &A, matrix &B, int events[], int event_size, int numruns) {
   
   // Preprocess matrices A, B
-  pair<vi,vi> prv = preprocess_mult_col(A, B);
+  pair<vi,pair<vi,vi> > prv = preprocess_mult_col(A, B);
 
   // Clock, PAPI
   clock_t start,end;
-  double time;
+  double time = 0;
   
   PAPI_library_init(PAPI_VER_CURRENT);
   long long values[event_size];
@@ -459,7 +462,7 @@ pair<double, pair<double,double> > test_col_mult_exclude_preprocess(matrix &A, m
 pair<double, pair<double,double> > test_naive_mult_exclude_preprocess(matrix &A, matrix &B, int events[], int event_size, int numruns) {
   
   // Preprocess matrices A, B
-  pair<vi,vi> prv = preprocess_mult_naive(A, B);
+  pair<vi,pair<vi,vi> > prv = preprocess_mult_naive(A, B);
 
   // Clock, PAPI
   clock_t start,end;
@@ -511,8 +514,6 @@ void test_runtime_l2_l3_accesses() {
   int numruns = 50;
   int events[2] = {PAPI_L2_TCA, PAPI_L3_TCA};
   int event_size = 2;
-
-  int run = 1;
 
   for (int run=1; run<numruns+1; run++) {
 
@@ -591,11 +592,9 @@ void test_runtime_l2_l3_accesses_row_rec() {
   int events[2] = {PAPI_L2_TCA, PAPI_L3_TCA};
   int event_size = 2;
 
-  int run = 1;
-
   for (int run=1; run<numruns+1; run++) {
 
-    size = 1 << run-1;
+    size = 1 << (run-1);
 
     cout << "Running test " << run << " of " << numruns << endl;
     
@@ -663,21 +662,17 @@ int main() {
 
   for (int i=0; i<matrix_size(A).first; i++)
     for (int j=0; j<matrix_size(A).second; j++) {
-      int r = rand() % MAX_NUM;
-      //A[i][j] = r; // (i*matrix_size(A).second)+j+1;
       A[i][j] = (i*matrix_size(A).second)+j+1;
     }
   
   for (int i=0; i<matrix_size(B).first; i++)
     for (int j=0; j<matrix_size(B).second; j++) {
-      int r = rand() % MAX_NUM;
-      //B[i][j] = r; // (i*matrix_size(B).second)+j+1;
       B[i][j] = (i*matrix_size(B).second)+j+1;
     }
 
   
-  pair<vi,pair<vi,vi> > prv = preprocess_mult_row(A, B);
-  vector<int> res_row = mult_row(A, B, prv);
+  pair<vi,pair<vi,vi> > prv = preprocess_mult_naive(A, B);
+  vector<int> res_row = mult_naive(A, B, prv);
 
   print_array_as_matrix(res_row, 4, 4);
   
