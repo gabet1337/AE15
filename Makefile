@@ -2,7 +2,6 @@ CXX=g++
 CXXFLAGS=-Wall -O2 -std=c++11
 .PHONY: pred
 pred:	clean
-	rm -f pred
 	$(CXX) $(CXXFLAGS) pred.cpp /usr/lib/x86_64-linux-gnu/libpapi.so -o pred 
 
 hw_counters: clean
