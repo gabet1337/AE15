@@ -11,7 +11,7 @@
 #include <random>
 #include <limits.h>
 #include <papi.h>
-#define BASE_BITS 8
+#define BASE_BITS 16
 #define BASE (1 << BASE_BITS)
 #define MASK (BASE-1)
 #define DIGITS(v, shift) (((v) >> shift) & MASK)
@@ -39,8 +39,32 @@ void radix_sort(vector<unsigned int> &A, unsigned int k) {
     for (int j = (int)A.size()-1; j >= 0; j--)
       B[--C[(A[j]&mask)>>(k*i)]] = A[j];
     A = B;
+    B.clear();
   }
 }
+
+//k should divide 32 but should not be 32. (1,2,4,8,16)
+void radix_sort_2(unsigned A[], size_t n, unsigned int k) {
+  unsigned int mask = (1 << k) - 1;
+  size_t mask_size = mask+1;
+  unsigned *storage = (unsigned*)malloc(n*mask_size*sizeof(unsigned));
+  for (unsigned int i = 0; i < 32/k; i++) {
+    mask = mask << (k * (i != 0));
+    //single counting sort using the mask
+
+    size_t next[mask_size];
+    // for (size_t x = 0; x < mask_size; x++) next[x] = 0;
+    for (size_t x = 0; x < mask_size; x++) next[x] = x*n;
+    for (size_t x = 0; x < n; x++)
+      storage[next[(A[x]&mask)>>(k*i)]++] = A[x];
+    size_t cur = 0;
+    for (size_t x = 0; x < mask_size; x++)
+      for (size_t y = 0; y < next[x]-x*n; y++)
+        A[cur++] = storage[n*x+y];
+  }
+  free(storage);
+}
+
 
 void omp_lsd_radix_sort(size_t n, unsigned data[]) {
   unsigned * buffer = (unsigned*)malloc(n*sizeof(unsigned));
@@ -102,15 +126,15 @@ void parallel_radix_sort(vui &A) {
   for (int i = 0; i < 256; i++) bucket3[i].reserve(size);
   vui next3(256,0);
   //sort the digits by MSD using counting sort in parallel
-  //#pragma omp parallel for
+  #pragma omp parallel for
   for (size_t i = 0; i < size; i++) {
     unsigned int d = (A[i] >> 24);
     bucket3[d][next3[d]] = A[i];
-    cout << A[i] << " goes to bucket3 " << d << " at position " << next3[d] << endl;
+    // cout << A[i] << " goes to bucket3 " << d << " at position " << next3[d] << endl;
     next3[d]++;
   }
   //omp barrier
-  //#pragma omp barrier 
+  #pragma omp barrier 
   //calculate prefix sum
   vui output_indices(256,0);
   output_indices[0] = 0;
@@ -119,7 +143,7 @@ void parallel_radix_sort(vui &A) {
   // cout << endl;
   //sort each bucket in parallel using counting sort from the LSD
   //for each bucket
-  //#pragma omp parallel for
+  #pragma omp parallel for
   for (size_t i = 0; i < 256; i++) {
     size_t bucket_i_size = next3[i];
     vvui bucket0(256, vui());
@@ -128,7 +152,7 @@ void parallel_radix_sort(vui &A) {
     //for each item in bucket i on first digit
     for (size_t j = 0; j < bucket_i_size; j++) {
       unsigned int d = (bucket3[i][j] & 0xFF);
-      cout << bucket3[i][j] << " goes to bucket0 " << d << " at position " << next0[d] << endl;
+      // cout << bucket3[i][j] << " goes to bucket0 " << d << " at position " << next0[d] << endl;
       bucket0[d][next0[d]] = bucket3[i][j];
       next0[d]++;
     }
@@ -142,7 +166,7 @@ void parallel_radix_sort(vui &A) {
       for (size_t k = 0; k < bucket0_j_size; k++) {
         unsigned int d = ((bucket0[j][k] & 0xFF00) >> 8);
         bucket1[d][next1[d]] = bucket0[j][k];
-        cout << bucket0[j][k] << " goes to bucket1 " << d << " at position  " << next1[d] << endl;
+        // cout << bucket0[j][k] << " goes to bucket1 " << d << " at position  " << next1[d] << endl;
         next1[d]++;
         histogram1[d]++;
         d = ((bucket0[j][k] & 0xFF0000) >> 16);
@@ -155,14 +179,15 @@ void parallel_radix_sort(vui &A) {
       //for each item in bucket1
       size_t bucket1_b_size = next1[b];
       for (size_t j = 0; j < bucket1_b_size; j++) {
-        unsigned int d0 = (bucket1[b][j] & 0xFF);
-        unsigned int d1 = (bucket1[b][j] & 0xFF00) >> 8;
+        // unsigned int d0 = (bucket1[b][j] & 0xFF);
+        // unsigned int d1 = (bucket1[b][j] & 0xFF00) >> 8;
         unsigned int d2 = (bucket1[b][j] & 0xFF0000) >> 16;
         unsigned int d3 = (bucket1[b][j] >> 24);
-        cout << bucket1[b][j] << " d: " << d3 << " " << d2 << " " << d1 << " " << d0 << endl;
-        cout << output_indices[d3] << " " << histogram2[d2] << " " << histogram1[d1] << " " << next0[d0] << endl;
-        int k = output_indices[d3] + (histogram2[d2] - histogram1[d2]);
-        cout << k << " = " << output_indices[d3] << " - " << histogram2[d2] << endl;
+        // cout << bucket1[b][j] << " d: " << d3 << " " << d2 << " " << d1 << " " << d0 << endl;
+        // cout << output_indices[d3] << " " << histogram2[d2] << " " << histogram1[d1] << " " << next0[d0] << endl;
+        int k = output_indices[d3] -histogram2[d2];
+        histogram2[d2]--;
+        // cout << k << " = " << output_indices[d3] << " - " << histogram2[d2] << endl;
         A[k] = bucket1[b][j];
         // cout << k << " " << bucket1[b][j] << endl; 
       }
@@ -193,7 +218,7 @@ void test_running_time() {
         data2[i] = r;
       }
       high_resolution_clock::time_point t1 = high_resolution_clock::now();
-      omp_lsd_radix_sort(size,data);
+      //omp_lsd_radix_sort(size,data);
       high_resolution_clock::time_point t2 = high_resolution_clock::now();
       auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
       multi_core_average += duration;
@@ -249,7 +274,7 @@ ppvuill test_papi_events(int events[]) {
       val12 += values[1];
 
       PAPI_start_counters(events,2);
-      omp_lsd_radix_sort(size,data);
+      //omp_lsd_radix_sort(size,data);
       PAPI_stop_counters(values,2);
       val21 += values[0];
       val22 += values[1];
@@ -373,22 +398,22 @@ int main() {
   // test_L2();
   // test_L3();
   // test_running_time();
-
   // return 0;
 
-  size_t size = 100000000;
-  unsigned *data = (unsigned*)malloc(size * sizeof(unsigned));
+  size_t size = (1<<30);
   vector<unsigned int> data2(size,0);
+  //unsigned *data = (unsigned*)malloc(size*sizeof(unsigned));
   for (size_t i = 0; i < size; i++) {
     int r = rand();
-    data[i] = r;
+    //data[i] = r;
     data2[i] = r;
   }
 
 
   high_resolution_clock::time_point t1 = high_resolution_clock::now();
-  //parallel_radix_sort(s);
-  omp_lsd_radix_sort(size, data);
+  //parallel_radix_sort(data);
+  // omp_lsd_radix_sort(size, data);
+  //radix_sort_2(data, size, 8);
   high_resolution_clock::time_point t2 = high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
   cout << duration << endl;  
@@ -404,8 +429,8 @@ int main() {
   // for (size_t i = 0; i < size; i++)
   //   cout << data[i] << " ";
   // cout << endl;
-  if (is_sorted(data, data+size)) cout << "SUCCESS!!!" << endl;
-  else cout << "FAILED!!!" << endl;
+  // if (is_sorted(data, data+size)) cout << "SUCCESS!!!" << endl;
+  // else cout << "FAILED!!!" << endl;
   if (is_sorted(data2.begin(), data2.end())) cout << "SUCCESS!!!" << endl;
   else cout << "FAILED!!!" << endl;
     
