@@ -15,6 +15,7 @@
 #define BASE (1 << BASE_BITS)
 #define MASK (BASE-1)
 #define DIGITS(v, shift) (((v) >> shift) & MASK)
+#define BUFFER_BASE 32
 
 using namespace std;
 using namespace std::chrono;
@@ -197,7 +198,7 @@ void test_running_time() {
       auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
       multi_core_average += duration;
       t1 = high_resolution_clock::now();
-      radix_sort(data2,8);
+      radix_sort(data2,BASE_BITS);
       t2 = high_resolution_clock::now();
       duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
       single_core_average += duration;
@@ -242,7 +243,7 @@ ppvuill test_papi_events(int events[]) {
       cout << "Running experiment..." << endl;
       
       PAPI_start_counters(events, 2);
-      radix_sort(data2,8); 
+      radix_sort(data2,BASE_BITS); 
       PAPI_stop_counters(values,2);
       val11 += values[0];
       val12 += values[1];
@@ -366,15 +367,16 @@ void test_TLB() {
 }
 
 int main() {
-  srand(time(NULL));
-  test_TLB();
-  //test_BR_MSP();
+  // srand(time(NULL));
+  // test_TLB();
+  // test_BR_MSP();
   // test_L2();
   // test_L3();
-  //test_running_time();
-  return 0;
+  // test_running_time();
 
-  size_t size = 100000000*2;
+  // return 0;
+
+  size_t size = 100000000;
   unsigned *data = (unsigned*)malloc(size * sizeof(unsigned));
   vector<unsigned int> data2(size,0);
   for (size_t i = 0; i < size; i++) {
@@ -392,7 +394,7 @@ int main() {
   cout << duration << endl;  
 
   t1 = high_resolution_clock::now();
-  radix_sort(data2, 8);  
+  radix_sort(data2, 4);  
   t2 = high_resolution_clock::now();
   duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
   cout << duration << endl;  

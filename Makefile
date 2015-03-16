@@ -11,7 +11,7 @@ small:	clean
 	$(CXX) -O3 small_test.cpp /usr/lib/x86_64-linux-gnu/libpapi.so -o small
 
 matrix:	clean
-	$(CXX) -O3 -fopenmp -Wall -std=c++11 matrix.cpp /usr/lib/x86_64-linux-gnu/libpapi.so -o matrix
+	$(CXX) -03 -fopenmp -Wall -std=c++11 matrix.cpp /usr/lib/x86_64-linux-gnu/libpapi.so -o matrix
 
 count:	clean
 	$(CXX) $(CXXFLAGS) counting_sort.cpp -o count
