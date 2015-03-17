@@ -5,14 +5,13 @@
 using namespace std;
 
 int main () {
-
   int eventset = PAPI_NULL;
   PAPI_library_init(PAPI_VER_CURRENT);
   long long values[1] = {0};
   
   PAPI_create_eventset(&eventset); 
 
-  cout << PAPI_add_event(eventset, PAPI_L1_DCA) << endl;
+  cout << PAPI_add_event(eventset, PAPI_L1_TCM) << endl;
 
   cout << PAPI_start(eventset) << endl;
   int i = 0;

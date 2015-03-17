@@ -10,11 +10,8 @@
 #include <fstream>
 #include <string>
 #include <cstring>
-//2e12*4
-//#define SIZE 16383
-//2e16*4
-//#define SIZE 262143
-//2e19*4
+#include <chrono>
+#include <random>
 
 #define NUM_QUERIES 1e6
 // #define NUM_QUERIES 1
@@ -22,6 +19,7 @@
 #define NUM_EXPERIMENTS 42
 
 using namespace std;
+using namespace std::chrono;
 typedef long long ll;
 typedef pair<ll, ll> llll;
 
@@ -309,7 +307,556 @@ llll tester(int(*left)(const int, const int),
   return make_pair(val1/NUM_EXPERIMENTS, val2/NUM_EXPERIMENTS);
 }
 
+void test_running_time() {
+  ofstream lb,bs,dfsf,bfsf,inorderf;
+  lb.open("pred_running_time_lb.dat");
+  bs.open("pred_running_time_bs.dat");
+  dfsf.open("pred_running_time_dfs.dat");
+  bfsf.open("pred_running_time_bfs.dat");
+  inorderf.open("pred_running_time_inorder.dat");
+  //test the running time as a function of input size
+  high_resolution_clock::time_point start, end;
+  for (double i = 2; i <= 25; i+=1) {
+    size_t size = (size_t)pow((double)2, i)-1;
+    cout << "Generating test data of size " << size << "..." << endl;
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<int> dis(0, INT_MAX);
+    vector<int> data;
+    data.resize(size);
+    for (size_t j = 0; j < size; j++) {
+      data[j] = dis(gen);
+    }
+    preprocess_sorted_array(data);
+
+    cout << "Running test on lower_bound..." << endl;
+    int p,x;
+    start = high_resolution_clock::now();
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = pred_lower_bound(x, data);
+    }
+    end = high_resolution_clock::now();
+    auto duration = duration_cast<milliseconds>(end - start).count();
+    lb << size << "\t" << duration << endl;
+    cout << "done with test on lower_bound..." << p << endl;
+
+    cout << "Running test on binary search..." << endl;
+    start = high_resolution_clock::now();
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = pred_sorted_array(x, data);
+    }
+    end = high_resolution_clock::now();
+    duration = duration_cast<milliseconds>(end - start).count();
+    bs << size << "\t" << duration << endl;
+    cout << "done with test on binary search..." << p << endl;
+
+    struct Node *BST = sorted_array_to_BST(data, 0, size-1); 
+
+    vector<int> dfs = sorted_array_to_dfs_tree(BST,data,size);
+    int dfs_height = ceil(log2((int)dfs.size()));
+    cout << "Running test on dfs..." << endl;
+    start = high_resolution_clock::now();
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = tree_predecessor(dfs_left, dfs_right, dfs, x, dfs_height, 0);
+    }
+    end = high_resolution_clock::now();
+    duration = duration_cast<milliseconds>(end - start).count();
+    dfsf << size << "\t" << duration << endl;
+    cout << "done with test on dfs..." << p << endl;
+    dfs.clear();
+
+    vector<int> bfs = sorted_array_to_bfs_tree(BST,data,size);
+    int bfs_height = ceil(log2((int)bfs.size()));
+    cout << "Running test on bfs..." << endl;
+    start = high_resolution_clock::now();
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = tree_predecessor(bfs_left, bfs_right, bfs, x, bfs_height, 0);
+    }
+    end = high_resolution_clock::now();
+    duration = duration_cast<milliseconds>(end - start).count();
+    bfsf << size << "\t" << duration << endl;
+    cout << "done with test on bfs..." << p << endl;
+    bfs.clear();
+
+    vector<int> inorder = sorted_array_to_inorder_tree(BST,data,size);
+    int inorder_height = ceil(log2((int)inorder.size()));
+    int inorder_root = inorder.size()/2-1;
+    cout << "Running test on inorder..." << endl;
+    start = high_resolution_clock::now();
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = tree_predecessor(inorder_left, inorder_right, inorder, x, inorder_height, inorder_root);
+    }
+    end = high_resolution_clock::now();
+    duration = duration_cast<milliseconds>(end - start).count();
+    inorderf << size << "\t" << duration << endl;
+    cout << "done with test on bfs..." << p << endl;
+    inorder.clear();
+  }
+}
+
+void test_L2() {
+  ofstream lb,bs,dfsf,bfsf,inorderf;
+  lb.open("pred_l2_lb.dat");
+  bs.open("pred_l2_bs.dat");
+  dfsf.open("pred_l2_dfs.dat");
+  bfsf.open("pred_l2_bfs.dat");
+  inorderf.open("pred_l2_inorder.dat");
+  //test the running time as a function of input size
+  PAPI_library_init(PAPI_VER_CURRENT);
+  int events[2] = {PAPI_L2_TCA, PAPI_L2_TCM};
+  long long values[2];
+  for (double i = 2; i <= 25; i+=1) {
+    size_t size = (size_t)pow((double)2, i)-1;
+    cout << "Generating test data of size " << size << "..." << endl;
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<int> dis(0, INT_MAX);
+    vector<int> data;
+    data.resize(size);
+    for (size_t j = 0; j < size; j++) {
+      data[j] = dis(gen);
+    }
+    preprocess_sorted_array(data);
+    
+    cout << "Running test on lower_bound..." << endl;
+    int p,x;
+    PAPI_start_counters(events,2);
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = pred_lower_bound(x, data);
+    }
+    PAPI_stop_counters(values,2);
+    lb << size << "\t" << (double)values[1]/(double)values[0] << endl;
+    cout << "done with test on lower_bound..." << p << endl;
+
+    cout << "Running test on binary search..." << endl;
+    PAPI_start_counters(events,2);
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = pred_sorted_array(x, data);
+    }
+    PAPI_stop_counters(values,2);
+    bs << size << "\t" << (double)values[1]/(double)values[0] << endl;
+    cout << "done with test on binary search..." << p << endl;
+
+    struct Node *BST = sorted_array_to_BST(data, 0, size-1); 
+
+    vector<int> dfs = sorted_array_to_dfs_tree(BST,data,size);
+    int dfs_height = ceil(log2((int)dfs.size()));
+    cout << "Running test on dfs..." << endl;
+    PAPI_start_counters(events,2);
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = tree_predecessor(dfs_left, dfs_right, dfs, x, dfs_height, 0);
+    }
+    PAPI_stop_counters(values,2);
+    dfsf << size << "\t" << (double)values[1]/(double)values[0] << endl;
+    cout << "done with test on dfs..." << p << endl;
+    dfs.clear();
+
+    vector<int> bfs = sorted_array_to_bfs_tree(BST,data,size);
+    int bfs_height = ceil(log2((int)bfs.size()));
+    cout << "Running test on bfs..." << endl;
+    PAPI_start_counters(events,2);
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = tree_predecessor(bfs_left, bfs_right, bfs, x, bfs_height, 0);
+    }
+    PAPI_stop_counters(values,2);
+    bfsf << size << "\t" << (double)values[1]/(double)values[0] << endl;
+    cout << "done with test on bfs..." << p << endl;
+    bfs.clear();
+
+    vector<int> inorder = sorted_array_to_inorder_tree(BST,data,size);
+    int inorder_height = ceil(log2((int)inorder.size()));
+    int inorder_root = inorder.size()/2-1;
+    cout << "Running test on inorder..." << endl;
+    PAPI_start_counters(events,2);
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = tree_predecessor(inorder_left, inorder_right, inorder, x, inorder_height, inorder_root);
+    }
+    PAPI_stop_counters(values,2);
+    inorderf << size << "\t" << (double)values[1]/(double)values[0] << endl;
+    cout << "done with test on bfs..." << p << endl;
+    inorder.clear();
+  }
+}
+
+void test_L3() {
+  ofstream lb,bs,dfsf,bfsf,inorderf;
+  lb.open("pred_l3_lb.dat");
+  bs.open("pred_l3_bs.dat");
+  dfsf.open("pred_l3_dfs.dat");
+  bfsf.open("pred_l3_bfs.dat");
+  inorderf.open("pred_l3_inorder.dat");
+  //test the running time as a function of input size
+  PAPI_library_init(PAPI_VER_CURRENT);
+  int events[2] = {PAPI_L3_TCA, PAPI_L3_TCM};
+  long long values[2];
+  for (double i = 2; i <= 25; i+=1) {
+    clear_cache(); 
+    size_t size = (size_t)pow((double)2, i)-1;
+    cout << "Generating test data of size " << size << "..." << endl;
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<int> dis(0, INT_MAX);
+    vector<int> data;
+    data.resize(size);
+    for (size_t j = 0; j < size; j++) {
+      data[j] = dis(gen);
+    }
+    preprocess_sorted_array(data);
+    clear_cache(); 
+    cout << "Running test on lower_bound..." << endl;
+    int p,x;
+    PAPI_start_counters(events,2);
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = pred_lower_bound(x, data);
+    }
+    PAPI_stop_counters(values,2);
+    lb << size << "\t" << (double)values[1]/(double)values[0] << endl;
+    cout << "done with test on lower_bound..." << p << endl;
+    clear_cache(); 
+    cout << "Running test on binary search..." << endl;
+    PAPI_start_counters(events,2);
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = pred_sorted_array(x, data);
+    }
+    PAPI_stop_counters(values,2);
+    bs << size << "\t" << (double)values[1]/(double)values[0] << endl;
+    cout << "done with test on binary search..." << p << endl;
+
+    struct Node *BST = sorted_array_to_BST(data, 0, size-1); 
+    clear_cache(); 
+    vector<int> dfs = sorted_array_to_dfs_tree(BST,data,size);
+    int dfs_height = ceil(log2((int)dfs.size()));
+    cout << "Running test on dfs..." << endl;
+    PAPI_start_counters(events,2);
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = tree_predecessor(dfs_left, dfs_right, dfs, x, dfs_height, 0);
+    }
+    PAPI_stop_counters(values,2);
+    dfsf << size << "\t" << (double)values[1]/(double)values[0] << endl;
+    cout << "done with test on dfs..." << p << endl;
+    dfs.clear();
+    clear_cache(); 
+    vector<int> bfs = sorted_array_to_bfs_tree(BST,data,size);
+    int bfs_height = ceil(log2((int)bfs.size()));
+    cout << "Running test on bfs..." << endl;
+    PAPI_start_counters(events,2);
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = tree_predecessor(bfs_left, bfs_right, bfs, x, bfs_height, 0);
+    }
+    PAPI_stop_counters(values,2);
+    bfsf << size << "\t" << (double)values[1]/(double)values[0] << endl;
+    cout << "done with test on bfs..." << p << endl;
+    bfs.clear();
+    clear_cache(); 
+    vector<int> inorder = sorted_array_to_inorder_tree(BST,data,size);
+    int inorder_height = ceil(log2((int)inorder.size()));
+    int inorder_root = inorder.size()/2-1;
+    cout << "Running test on inorder..." << endl;
+    PAPI_start_counters(events,2);
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = tree_predecessor(inorder_left, inorder_right, inorder, x, inorder_height, inorder_root);
+    }
+    PAPI_stop_counters(values,2);
+    inorderf << size << "\t" << (double)values[1]/(double)values[0] << endl;
+    cout << "done with test on bfs..." << p << endl;
+    inorder.clear();
+  }
+}
+
+void test_BR_MSP() {
+  ofstream lb,bs,dfsf,bfsf,inorderf;
+  lb.open("pred_br_lb.dat");
+  bs.open("pred_br_bs.dat");
+  dfsf.open("pred_br_dfs.dat");
+  bfsf.open("pred_br_bfs.dat");
+  inorderf.open("pred_br_inorder.dat");
+  //test the running time as a function of input size
+  PAPI_library_init(PAPI_VER_CURRENT);
+  int events[2] = {PAPI_BR_CN, PAPI_BR_MSP};
+  long long values[2];
+  for (double i = 2; i <= 25; i+=1) {
+    clear_cache(); 
+    size_t size = (size_t)pow((double)2, i)-1;
+    cout << "Generating test data of size " << size << "..." << endl;
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<int> dis(0, INT_MAX);
+    vector<int> data;
+    data.resize(size);
+    for (size_t j = 0; j < size; j++) {
+      data[j] = dis(gen);
+    }
+    preprocess_sorted_array(data);
+    clear_cache(); 
+    cout << "Running test on lower_bound..." << endl;
+    int p,x;
+    PAPI_start_counters(events,2);
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = pred_lower_bound(x, data);
+    }
+    PAPI_stop_counters(values,2);
+    lb << size << "\t" << (double)values[1]/(double)values[0] << endl;
+    cout << "done with test on lower_bound..." << p << endl;
+    clear_cache(); 
+    cout << "Running test on binary search..." << endl;
+    PAPI_start_counters(events,2);
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = pred_sorted_array(x, data);
+    }
+    PAPI_stop_counters(values,2);
+    bs << size << "\t" << (double)values[1]/(double)values[0] << endl;
+    cout << "done with test on binary search..." << p << endl;
+
+    struct Node *BST = sorted_array_to_BST(data, 0, size-1); 
+    clear_cache(); 
+    vector<int> dfs = sorted_array_to_dfs_tree(BST,data,size);
+    int dfs_height = ceil(log2((int)dfs.size()));
+    cout << "Running test on dfs..." << endl;
+    PAPI_start_counters(events,2);
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = tree_predecessor(dfs_left, dfs_right, dfs, x, dfs_height, 0);
+    }
+    PAPI_stop_counters(values,2);
+    dfsf << size << "\t" << (double)values[1]/(double)values[0] << endl;
+    cout << "done with test on dfs..." << p << endl;
+    dfs.clear();
+    clear_cache(); 
+    vector<int> bfs = sorted_array_to_bfs_tree(BST,data,size);
+    int bfs_height = ceil(log2((int)bfs.size()));
+    cout << "Running test on bfs..." << endl;
+    PAPI_start_counters(events,2);
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = tree_predecessor(bfs_left, bfs_right, bfs, x, bfs_height, 0);
+    }
+    PAPI_stop_counters(values,2);
+    bfsf << size << "\t" << (double)values[1]/(double)values[0] << endl;
+    cout << "done with test on bfs..." << p << endl;
+    bfs.clear();
+    clear_cache(); 
+    vector<int> inorder = sorted_array_to_inorder_tree(BST,data,size);
+    int inorder_height = ceil(log2((int)inorder.size()));
+    int inorder_root = inorder.size()/2-1;
+    cout << "Running test on inorder..." << endl;
+    PAPI_start_counters(events,2);
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = tree_predecessor(inorder_left, inorder_right, inorder, x, inorder_height, inorder_root);
+    }
+    PAPI_stop_counters(values,2);
+    inorderf << size << "\t" << (double)values[1]/(double)values[0] << endl;
+    cout << "done with test on bfs..." << p << endl;
+    inorder.clear();
+  }
+}
+
+void test_TLB() {
+  ofstream lb,bs,dfsf,bfsf,inorderf;
+  lb.open("pred_tlb_lb.dat");
+  bs.open("pred_tlb_bs.dat");
+  dfsf.open("pred_tlb_dfs.dat");
+  bfsf.open("pred_tlb_bfs.dat");
+  inorderf.open("pred_tlb_inorder.dat");
+  //test the running time as a function of input size
+  PAPI_library_init(PAPI_VER_CURRENT);
+  int events[2] = {PAPI_TLB_DM, PAPI_BR_MSP};
+  long long values[2];
+  for (double i = 2; i <= 25; i+=1) {
+    clear_cache();
+    size_t size = (size_t)pow((double)2, i)-1;
+    cout << "Generating test data of size " << size << "..." << endl;
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<int> dis(0, INT_MAX);
+    vector<int> data;
+    data.resize(size);
+    for (size_t j = 0; j < size; j++) {
+      data[j] = dis(gen);
+    }
+    preprocess_sorted_array(data);
+    clear_cache(); 
+    cout << "Running test on lower_bound..." << endl;
+    int p,x;
+    PAPI_start_counters(events,2);
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = pred_lower_bound(x, data);
+    }
+    PAPI_stop_counters(values,2);
+    lb << size << "\t" << values[0] << endl;
+    cout << "done with test on lower_bound..." << p << endl;
+    clear_cache(); 
+    cout << "Running test on binary search..." << endl;
+    PAPI_start_counters(events,2);
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = pred_sorted_array(x, data);
+    }
+    PAPI_stop_counters(values,2);
+    bs << size << "\t" << values[0] << endl;
+    cout << "done with test on binary search..." << p << endl;
+
+    struct Node *BST = sorted_array_to_BST(data, 0, size-1); 
+    clear_cache(); 
+    vector<int> dfs = sorted_array_to_dfs_tree(BST,data,size);
+    int dfs_height = ceil(log2((int)dfs.size()));
+    cout << "Running test on dfs..." << endl;
+    PAPI_start_counters(events,2);
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = tree_predecessor(dfs_left, dfs_right, dfs, x, dfs_height, 0);
+    }
+    PAPI_stop_counters(values,2);
+    dfsf << size << "\t" << values[0] << endl;
+    cout << "done with test on dfs..." << p << endl;
+    dfs.clear();
+    clear_cache(); 
+    vector<int> bfs = sorted_array_to_bfs_tree(BST,data,size);
+    int bfs_height = ceil(log2((int)bfs.size()));
+    cout << "Running test on bfs..." << endl;
+    PAPI_start_counters(events,2);
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = tree_predecessor(bfs_left, bfs_right, bfs, x, bfs_height, 0);
+    }
+    PAPI_stop_counters(values,2);
+    bfsf << size << "\t" << values[0] << endl;
+    cout << "done with test on bfs..." << p << endl;
+    bfs.clear();
+    clear_cache(); 
+    vector<int> inorder = sorted_array_to_inorder_tree(BST,data,size);
+    int inorder_height = ceil(log2((int)inorder.size()));
+    int inorder_root = inorder.size()/2-1;
+    cout << "Running test on inorder..." << endl;
+    PAPI_start_counters(events,2);
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = tree_predecessor(inorder_left, inorder_right, inorder, x, inorder_height, inorder_root);
+    }
+    PAPI_stop_counters(values,2);
+    inorderf << size << "\t" << values[0] << endl;
+    cout << "done with test on bfs..." << p << endl;
+    inorder.clear();
+  }
+}
+
+void test_TOT_CYC() {
+  ofstream lb,bs,dfsf,bfsf,inorderf;
+  lb.open("pred_tot_cyc_lb.dat");
+  bs.open("pred_tot_cyc_bs.dat");
+  dfsf.open("pred_tot_cyc_dfs.dat");
+  bfsf.open("pred_tot_cyc_bfs.dat");
+  inorderf.open("pred_tot_cyc_inorder.dat");
+  //test the running time as a function of input size
+  PAPI_library_init(PAPI_VER_CURRENT);
+  int events[1] = {PAPI_TOT_CYC};
+  long long values[1];
+  for (double i = 2; i <= 25; i+=1) {
+    clear_cache();
+    size_t size = (size_t)pow((double)2, i)-1;
+    cout << "Generating test data of size " << size << "..." << endl;
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<int> dis(0, INT_MAX);
+    vector<int> data;
+    data.resize(size);
+    for (size_t j = 0; j < size; j++) {
+      data[j] = dis(gen);
+    }
+    preprocess_sorted_array(data);
+    clear_cache(); 
+    cout << "Running test on lower_bound..." << endl;
+    int p,x;
+    PAPI_start_counters(events,1);
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = pred_lower_bound(x, data);
+    }
+    PAPI_stop_counters(values,1);
+    lb << size << "\t" << values[0] << endl;
+    cout << "done with test on lower_bound..." << p << endl;
+    clear_cache(); 
+    cout << "Running test on binary search..." << endl;
+    PAPI_start_counters(events,1);
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = pred_sorted_array(x, data);
+    }
+    PAPI_stop_counters(values,1);
+    bs << size << "\t" << values[0] << endl;
+    cout << "done with test on binary search..." << p << endl;
+
+    struct Node *BST = sorted_array_to_BST(data, 0, size-1); 
+    clear_cache(); 
+    vector<int> dfs = sorted_array_to_dfs_tree(BST,data,size);
+    int dfs_height = ceil(log2((int)dfs.size()));
+    cout << "Running test on dfs..." << endl;
+    PAPI_start_counters(events,1);
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = tree_predecessor(dfs_left, dfs_right, dfs, x, dfs_height, 0);
+    }
+    PAPI_stop_counters(values,1);
+    dfsf << size << "\t" << values[0] << endl;
+    cout << "done with test on dfs..." << p << endl;
+    dfs.clear();
+    clear_cache(); 
+    vector<int> bfs = sorted_array_to_bfs_tree(BST,data,size);
+    int bfs_height = ceil(log2((int)bfs.size()));
+    cout << "Running test on bfs..." << endl;
+    PAPI_start_counters(events,1);
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = tree_predecessor(bfs_left, bfs_right, bfs, x, bfs_height, 0);
+    }
+    PAPI_stop_counters(values,1);
+    bfsf << size << "\t" << values[0] << endl;
+    cout << "done with test on bfs..." << p << endl;
+    bfs.clear();
+    clear_cache(); 
+    vector<int> inorder = sorted_array_to_inorder_tree(BST,data,size);
+    int inorder_height = ceil(log2((int)inorder.size()));
+    int inorder_root = inorder.size()/2-1;
+    cout << "Running test on inorder..." << endl;
+    PAPI_start_counters(events,1);
+    for (size_t j = 0; j < 1e6; j++) {
+      x = dis(gen);
+      p = tree_predecessor(inorder_left, inorder_right, inorder, x, inorder_height, inorder_root);
+    }
+    PAPI_stop_counters(values,1);
+    inorderf << size << "\t" << values[0] << endl;
+    cout << "done with test on bfs..." << p << endl;
+    inorder.clear();
+  }
+}
+
+
 int main() {
+  // test_running_time();
+  // test_L2();
+  //test_L3();
+  // test_BR_MSP();
+  // test_TLB();
+  test_TOT_CYC();
+  return 0;
   srand (time(NULL));
   //test_bfs();
   //test();
